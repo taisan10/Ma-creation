@@ -1,0 +1,5 @@
+import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { api } from '../../lib/api'
+import { PlansHero, RetainerSection, ServicePackagesSection, TrainingPackagesSection, TrustBuilderSection, PaymentFaqSection } from './sections'
+export default function PlansPage(){const [plans,setPlans]=useState([]);const [cms,setCms]=useState({});useEffect(()=>{let active=true;api('/catalog/plans').then(d=>{if(active)setPlans(d.plans||[])}).catch(()=>{});api('/public/pages/plans').then(r=>{if(active)setCms(r.page?.content||{})}).catch(()=>{});return()=>{active=false}},[]);const training=plans.filter(p=>p.category==='training');const service=plans.filter(p=>p.category==='service');return <><div className="wrap pt-6 font-mono text-xs text-ink/50"><Link to="/">Home</Link> / Plans & Pricing</div><PlansHero cms={cms}/><RetainerSection cms={cms}/><ServicePackagesSection plans={service} cms={cms}/><TrainingPackagesSection plans={training} cms={cms}/><TrustBuilderSection/><PaymentFaqSection/></>}

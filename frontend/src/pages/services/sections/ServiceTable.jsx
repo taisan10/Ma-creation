@@ -1,0 +1,4 @@
+export default function ServiceTable({ rows = [] }) {
+  if (!rows.length) return <div className="card text-muted">No active services in this category. Add one from Admin → Services & Plans.</div>
+  return <div className="table-wrap overflow-x-auto"><table className="w-full min-w-[720px] border-collapse"><thead><tr><th className="th-cell">Service</th><th className="th-cell">Plan Name</th><th className="th-cell">Price</th><th className="th-cell">What&apos;s included</th></tr></thead><tbody>{rows.map((row,i)=><tr key={row._id || i} className={i%2?'bg-primary/[0.04]':''}><td className="td-cell">{row.service}</td><td className="td-cell">{row.planName||'—'}</td><td className="td-cell font-mono text-primary font-semibold whitespace-nowrap">{row.priceLabel||`₹${Number(row.price||0).toLocaleString('en-IN')} + GST`}</td><td className="td-cell">{row.features||'—'}</td></tr>)}</tbody></table></div>
+}
