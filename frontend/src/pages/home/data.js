@@ -1,17 +1,62 @@
 export const faqItems = [
-  { q: 'What services does MA Creation provide on the GeM Portal?', a: 'Registration, product & service listing, catalog management, bid and reverse-auction support, OEM/vendor assistance, and ongoing account management under our retainer plans.' },
-  { q: 'How can MA Creation help me with GeM registration?', a: 'We verify your documents, complete the seller or buyer registration on your behalf, and confirm login access — usually within 2 working days of receiving complete documents.' },
-  { q: 'Why should I choose MA Creation for product listing and catalog management?', a: 'Our team lists and maintains your catalog daily, keeps specifications accurate to avoid rejection, and can publish up to 15 products a day under our managed plans.' },
-  { q: 'Does MA Creation assist with bid and reverse auction (RA) participation?', a: 'Yes — from eligibility checks and documentation to pricing strategy and final bid submission, including objection replies where required.' },
-  { q: 'What type of GeM training programs does MA Creation offer?', a: 'Five tiers, from a 2-month Mastery Program through to Corporate Training for teams of 5+, covering registration, listings, bidding and compliance. See the Plans page for details.' },
-  { q: 'Can MA Creation help with catalog corrections and rejected product listings?', a: 'Yes. We diagnose the rejection reason, correct specifications or certifications, and resubmit the listing.' },
-  { q: 'What documents do I need for GeM registration through MA Creation?', a: 'See the Documentation section above for the full seller and buyer checklists — we’ll confirm anything specific to your category.' },
-  { q: 'Does MA Creation provide support after registration, like order management?', a: 'Yes — order processing, invoicing and dashboard monitoring are included in our GeM Essentials plan and above.' },
-  { q: 'Are there flexible plans available for GeM consultancy and long-term support?', a: 'Our retainer plans run 6, 12, 24 or 36 months with increasing order cover and benefits — see the Plans page for the full comparison.' },
-  { q: 'How does MA Creation assist with vendor assessment on GeM?', a: 'We prepare your document checklist, guide you through video assessment prep, and support compliance requirements ahead of the assessment.' },
-  { q: 'Does MA Creation offer tender alerts and competition tracking?', a: 'Yes — tender notifications and competitor price analysis are available as add-ons, and built into our Grow and OEM retainer plans.' },
-  { q: 'Can MA Creation manage my complete GeM account on a retainer plan?', a: 'Yes — our Business Booster and Premium Plus packages include full account management, analytics and monthly performance reporting.' },
-  { q: 'Does MA Creation support both product and service listings?', a: 'Yes, both categories are supported across registration, cataloguing and bidding.' },
-  { q: 'Can I get bid-only support from MA Creation?', a: 'Yes — our Tender Filing add-on covers end-to-end bid assistance without a full retainer commitment.' },
-  { q: 'How can I start working with MA Creation?', a: 'Book a free live demo above, or create an account from the Login / Register page and our team will reach out within 24 hours.' },
-]
+  {
+    q: "What services does MA Creation provide on the GeM Portal?",
+    a: "Registration, product & service listing, catalog management, bid and reverse-auction support, OEM/vendor assistance, and ongoing account management under our retainer plans.",
+  },
+  {
+    q: "How can MA Creation help me with GeM registration?",
+    a: "We verify your documents, complete the seller or buyer registration on your behalf, and confirm login access — usually within 2 working days of receiving complete documents.",
+  },
+  {
+    q: "Why should I choose MA Creation for product listing and catalog management?",
+    a: "Our team lists and maintains your catalog daily, keeps specifications accurate to avoid rejection, and can publish up to 15 products a day under our managed plans.",
+  },
+  {
+    q: "Does MA Creation assist with bid and reverse auction (RA) participation?",
+    a: "Yes — from eligibility checks and documentation to pricing strategy and final bid submission, including objection replies where required.",
+  },
+  {
+    q: "What type of GeM training programs does MA Creation offer?",
+    a: "Five tiers, from a 2-month Mastery Program through to Corporate Training for teams of 5+, covering registration, listings, bidding and compliance. See the Plans page for details.",
+  },
+  {
+    q: "Can MA Creation help with catalog corrections and rejected product listings?",
+    a: "Yes. We diagnose the rejection reason, correct specifications or certifications, and resubmit the listing.",
+  },
+  {
+    q: "What documents do I need for GeM registration through MA Creation?",
+    a: "See the Documentation section above for the full seller and buyer checklists — we’ll confirm anything specific to your category.",
+  },
+  {
+    q: "Does MA Creation provide support after registration, like order management?",
+    a: "Yes — order processing, invoicing and dashboard monitoring are included in our GeM Essentials plan and above.",
+  },
+  {
+    q: "Are there flexible plans available for GeM consultancy and long-term support?",
+    a: "Our retainer plans run 6, 12, 24 or 36 months with increasing order cover and benefits — see the Plans page for the full comparison.",
+  },
+  {
+    q: "How does MA Creation assist with vendor assessment on GeM?",
+    a: "We prepare your document checklist, guide you through video assessment prep, and support compliance requirements ahead of the assessment.",
+  },
+  {
+    q: "Does MA Creation offer tender alerts and competition tracking?",
+    a: "Yes — tender notifications and competitor price analysis are available as add-ons, and built into our Grow and OEM retainer plans.",
+  },
+  {
+    q: "Can MA Creation manage my complete GeM account on a retainer plan?",
+    a: "Yes — our Business Booster and Premium Plus packages include full account management, analytics and monthly performance reporting.",
+  },
+  {
+    q: "Does MA Creation support both product and service listings?",
+    a: "Yes, both categories are supported across registration, cataloguing and bidding.",
+  },
+  {
+    q: "Can I get bid-only support from MA Creation?",
+    a: "Yes — our Tender Filing add-on covers end-to-end bid assistance without a full retainer commitment.",
+  },
+  {
+    q: "How can I start working with MA Creation?",
+    a: "Book a free live demo above, or create an account from the Login / Register page and our team will reach out within 24 hours.",
+  },
+];

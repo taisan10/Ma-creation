@@ -1,6 +1,37 @@
 
 
 export default function StorySection({ cms = {} }) {
+  const whySellPoints = [
+    {
+      title: "100% Free & Online",
+      desc: "No registration fees & completely paperless.",
+    },
+    {
+      title: "Direct Government Access",
+      desc: "Sell directly to Central & State government departments across India.",
+    },
+    {
+      title: "Support for MSMEs & Startups",
+      desc: "Enjoy special benefits & relaxed rules for small businesses.",
+    },
+    {
+      title: "Easy Bidding & Live Pricing",
+      desc: "Join auctions with a live clock & change your prices dynamically.",
+    },
+    {
+      title: "Flexible Orders",
+      desc: "Create multiple invoices for a single order with fast brand approvals.",
+    },
+    {
+      title: "Smart Tracking Dashboard",
+      desc: "Use simple charts to monitor your supplies & payments easily.",
+    },
+    {
+      title: "Fair & Transparent",
+      desc: "Get clear reasons for bid rejections & fast online help for problems.",
+    },
+  ];
+
   return (
 
       <section data-font-section="about.story" className="section">
@@ -17,21 +48,14 @@ export default function StorySection({ cms = {} }) {
           </div>
 
           <div className="card">
-            <span className="eyebrow">What We Believe</span>
+            <span className="eyebrow">Why Sell on GeM?</span>
             <ul className="mt-4.5 space-y-4">
-              {(cms.values||[]).map((v,i)=><li key={v} className="text-[14.5px] text-ink/70"><strong className="block mb-0.5 text-ink">{v}</strong>MA Creation applies this principle across client work.</li>)}
-              <li className="text-[14.5px] text-ink/70">
-                <strong className="block mb-0.5 text-ink">Documentation is strategy.</strong>
-                A clean file wins more often than a low price.
-              </li>
-              <li className="text-[14.5px] text-ink/70">
-                <strong className="block mb-0.5 text-ink">Consultancy should be data‑driven.</strong>
-                Every recommendation is backed by portal analytics, not guesswork.
-              </li>
-              <li className="text-[14.5px] text-ink/70">
-                <strong className="block mb-0.5 text-ink">Training builds independence.</strong>
-                We&rsquo;d rather teach your team to fish than keep every key to your account.
-              </li>
+              {whySellPoints.map((point, i) => (
+                <li key={i} className="text-[14.5px] text-ink/70">
+                  <strong className="block mb-0.5 text-ink">{i + 1}. {point.title}</strong>
+                  {point.desc}
+                </li>
+              ))}
             </ul>
           </div>
         </div>
