@@ -34,7 +34,7 @@
 export default function FounderSection({ cms = {} }) {
   const founders = [
     {
-      name: cms.founderName || "Chanchal",
+      name: cms.founderName || "Chanchal Mangal",
       role: cms.founderRole || "Founder & GeM Consultant",
       bio:
         cms.founderBio ||
