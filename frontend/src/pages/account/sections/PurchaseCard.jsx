@@ -1,0 +1,56 @@
+import { printReceipt } from '../../../lib/printReceipt'
+
+function money(value) { return `₹${Number(value || 0).toLocaleString('en-IN')}` }
+
+function Status({ value }) {
+  const label = value === 'paid' ? 'Paid' : value === 'failed' ? 'Payment failed' : 'Processing'
+  const cls = value === 'paid' ? 'bg-teal/10 text-teal border-teal/20' : value === 'failed' ? 'bg-rust/10 text-rust border-rust/20' : 'bg-gold/10 text-gold2 border-gold/20'
+  return <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${cls}`}>{label}</span>
+}
+
+export default function PurchaseCard({ payment }) {
+  const plan = payment.plan || {}
+  return (
+    <article className="card border border-ink/10 overflow-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <span className="eyebrow">Purchase</span>
+          <h2 className="mt-2 font-display text-[22px]">{plan.name || 'MA Creation Plan'}</h2>
+          <p className="mt-1 text-sm text-ink/60">{plan.billing || 'One-time'}{plan.duration ? ` · ${plan.duration}` : ''}</p>
+        </div>
+        <Status value={payment.status} />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
+        <div className="rounded-lg bg-paper2 p-4">
+          <div className="text-[11px] uppercase tracking-wider text-ink/45">Amount paid</div>
+          <div className="mt-1 font-mono text-xl">{money(payment.amount)} <span className="text-xs text-ink/45">{payment.currency || 'INR'}</span></div>
+        </div>
+        <div className="rounded-lg bg-paper2 p-4">
+          <div className="text-[11px] uppercase tracking-wider text-ink/45">Purchase date</div>
+          <div className="mt-1 text-sm font-semibold">{payment.createdAt ? new Date(payment.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div>
+          <div className="text-xs text-ink/45">{payment.createdAt ? new Date(payment.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
+        </div>
+        <div className="rounded-lg bg-paper2 p-4">
+          <div className="text-[11px] uppercase tracking-wider text-ink/45">Payment ID</div>
+          <div className="mt-1 font-mono text-xs break-all">{payment.razorpayPaymentId || 'Processing'}</div>
+        </div>
+      </div>
+      <div className="mt-5 pt-5 border-t border-ink/10 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+        <div><span className="text-ink/45">Order ID:</span> <span className="font-mono text-xs break-all">{payment.razorpayOrderId || '—'}</span></div>
+        <div><span className="text-ink/45">Customer:</span> {payment.name || '—'}</div>
+      </div>
+      {Array.isArray(plan.features) && plan.features.length > 0 && (
+        <div className="mt-5">
+          <div className="text-sm font-semibold">Included in your plan</div>
+          <ul className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {plan.features.slice(0, 8).map(feature => <li key={feature} className="text-sm text-ink/65 flex gap-2"><span className="text-teal font-bold">✓</span>{feature}</li>)}
+          </ul>
+        </div>
+      )}
+      <div className="mt-6 flex flex-wrap gap-3">
+        <button type="button" onClick={() => printReceipt(payment)} className="btn-outline btn-sm">Print / Save receipt</button>
+        <a href="#support" className="btn-gold btn-sm">Need help?</a>
+      </div>
+    </article>
+  )
+}

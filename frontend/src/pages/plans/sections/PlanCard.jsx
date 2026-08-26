@@ -1,0 +1,13 @@
+import PurchaseButton from './PurchaseButton'
+export default function PlanCard({ plan, purchased }) {
+  return (
+    <div className={`plan-card ${plan.featured ? 'featured' : ''}`}>
+      {plan.featured && <span className="absolute -top-3 right-5 bg-gold text-white font-mono text-[11px] px-2.5 py-1 rounded-full">Popular</span>}
+      <h3 className="font-display text-[19px]">{plan.name}</h3>
+      <div className="font-mono text-[26px]">₹{Number(plan.price || 0).toLocaleString('en-IN')}<small className="text-xs text-ink/50 font-normal"> + GST</small></div>
+      <p className="text-xs text-ink/50">{plan.billing}{plan.duration ? ` · ${plan.duration}` : ''}</p>
+      <ul className="space-y-2 flex-1">{(plan.features || []).map(f => <li key={f} className="text-[13.8px] text-ink/70 flex gap-2"><span className="text-teal font-bold">✓</span><span>{f}</span></li>)}</ul>
+      <PurchaseButton planId={plan._id} planName={plan.name} alreadyPurchased={!!purchased} purchasedOn={purchased?.createdAt} />
+    </div>
+  )
+}

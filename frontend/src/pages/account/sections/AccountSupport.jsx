@@ -1,0 +1,1 @@
+export default function AccountSupport(){return <div id="support" className="card mt-9 bg-paper2"><div className="font-display text-xl">Need help with a purchase?</div><p className="mt-2 text-sm text-ink/60">Keep your payment ID or order ID ready when contacting MA Creation. Our team can use these details to locate your purchase quickly.</p></div>}

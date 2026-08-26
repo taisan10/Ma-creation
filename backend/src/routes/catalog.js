@@ -1,0 +1,1 @@
+import {Router} from 'express';import {asyncHandler} from '../utils/asyncHandler.js';import * as c from '../controllers/catalogController.js';const router=Router();router.get('/services',asyncHandler(c.listServices));router.get('/plans',asyncHandler(c.listPlans));export default router

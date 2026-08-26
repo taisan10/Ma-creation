@@ -1,0 +1,1 @@
+export default function CmsPageSelector({ slugs, selected, onSelect }){return <div className="card h-fit sticky top-4">{slugs.map(slug=><button key={slug} onClick={()=>onSelect(slug)} className={`w-full text-left px-3 py-2.5 rounded-lg text-sm capitalize ${selected===slug?'bg-primary text-white':'hover:bg-backgroundAlt'}`}>{slug}</button>)}</div>}

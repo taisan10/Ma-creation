@@ -1,0 +1,61 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./index.html', './src/**/*.{js,jsx}'],
+  theme: {
+    extend: {
+      colors: {
+        ink: 'rgb(var(--text-rgb) / <alpha-value>)',
+        ink2: 'rgb(var(--textSoft-rgb) / <alpha-value>)',
+        paper: 'rgb(var(--background-rgb) / <alpha-value>)',
+        paper2: 'rgb(var(--backgroundAlt-rgb) / <alpha-value>)',
+        paper3: 'rgb(var(--backgroundSoft-rgb) / <alpha-value>)',
+        card: 'rgb(var(--surface-rgb) / <alpha-value>)',
+        gold: 'rgb(var(--primary-rgb) / <alpha-value>)',
+        gold2: 'rgb(var(--primaryDark-rgb) / <alpha-value>)',
+        goldlight: 'rgb(var(--accent-rgb) / <alpha-value>)',
+        teal: 'rgb(var(--secondary-rgb) / <alpha-value>)',
+        teal2: 'rgb(var(--secondaryDark-rgb) / <alpha-value>)',
+        rust: 'rgb(var(--danger-rgb) / <alpha-value>)',
+        mint: 'rgb(var(--accent-rgb) / <alpha-value>)',
+        indigo: 'rgb(var(--primary-rgb) / <alpha-value>)',
+        text: 'rgb(var(--text-rgb) / <alpha-value>)',
+        muted: 'rgb(var(--muted-rgb) / <alpha-value>)',
+        border: 'rgb(var(--border-rgb) / <alpha-value>)',
+        success: 'rgb(var(--success-rgb) / <alpha-value>)',
+        warning: 'rgb(var(--warning-rgb) / <alpha-value>)',
+        danger: 'rgb(var(--danger-rgb) / <alpha-value>)',
+        primary: 'rgb(var(--primary-rgb) / <alpha-value>)',
+        primaryDark: 'rgb(var(--primaryDark-rgb) / <alpha-value>)',
+        secondary: 'rgb(var(--secondary-rgb) / <alpha-value>)',
+        secondaryDark: 'rgb(var(--secondaryDark-rgb) / <alpha-value>)',
+        accent: 'rgb(var(--accent-rgb) / <alpha-value>)',
+        accent2: 'rgb(var(--accent2-rgb) / <alpha-value>)',
+        background: 'rgb(var(--background-rgb) / <alpha-value>)',
+        backgroundAlt: 'rgb(var(--backgroundAlt-rgb) / <alpha-value>)',
+        backgroundSoft: 'rgb(var(--backgroundSoft-rgb) / <alpha-value>)',
+        surface: 'rgb(var(--surface-rgb) / <alpha-value>)',
+        textSoft: 'rgb(var(--textSoft-rgb) / <alpha-value>)',
+      },
+      backgroundImage: {
+        'brand-gradient': 'var(--brand-gradient)',
+        'brand-ribbon': 'var(--brand-ribbon)',
+      },
+      fontFamily: {
+        display: ['var(--effective-font-family)'],
+        body: ['var(--effective-font-family)'],
+        mono: ['var(--effective-font-family)'],
+      },
+      maxWidth: { wrap: '1180px' },
+      boxShadow: { card: '0 18px 40px -20px rgb(var(--shadow-rgb) / .35)' },
+      keyframes: {
+        sealspin: { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } },
+        fadein: { from: { opacity: 0, transform: 'translateY(4px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
+        floaty: { '0%,100%': { transform: 'translateY(0) rotateX(0deg) rotateY(0deg)' }, '50%': { transform: 'translateY(-8px) rotateX(3deg) rotateY(6deg)' } },
+      },
+      animation: {
+        sealspin: 'sealspin 40s linear infinite', fadein: 'fadein .25s ease', floaty: 'floaty 5s ease-in-out infinite'
+      },
+    },
+  },
+  plugins: [],
+}
