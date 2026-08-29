@@ -24,7 +24,7 @@ export default function HomePage() {
     <ServicesOverviewSection cms={cms} />
     <CertificationsSection cms={cms} />
       <WhyChooseGemSection cms={cms} />
-    {/* <CustomerReviewsSection /> */}
+    <CustomerReviewsSection />
     <DemoSection cms={cms} />
     <CaseFileSummarySection cms={cms} stats={stats} />
     <IndustriesSection cms={cms} industries={industries} />

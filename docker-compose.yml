@@ -1,0 +1,104 @@
+version: "3.9"
+
+services:
+  # ---- MongoDB: self-hosted, private to the docker network only ----
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ma-creation
+    volumes:
+      - mongo_data:/data/db
+      - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks: [internal]
+    # No "ports:" section on purpose -- Mongo is NOT reachable from outside
+    # the docker network at all, only other containers on `internal` can
+    # reach it by its service name "mongo".
+
+  # ---- MinIO: object storage for video files ----
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    networks: [internal]
+    # No "ports:" published to the host either -- MinIO's API (9000) is only
+    # reached by (a) the "backend" container internally, and (b) the public
+    # internet through the "caddy" reverse proxy below, which is the only
+    # container allowed to publish ports to the host.
+
+  # ---- Node/Express backend (this project's API) ----
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on: [mongo, minio]
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      CLIENT_URL: ${CLIENT_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
+      # Mongo reached by its SERVICE NAME "mongo", not 127.0.0.1 -- Docker's
+      # internal DNS resolves "mongo" to the mongo container automatically.
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongo:27017/ma-creation?authSource=admin
+      # MinIO reached internally by its SERVICE NAME "minio", plain HTTP --
+      # this traffic never leaves the docker network so TLS isn't needed here.
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ma-course-videos
+      # Public endpoint used ONLY when building presigned URLs for the
+      # browser -- this must be the real public domain, TLS-terminated by caddy.
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_DOMAIN}
+      MINIO_PUBLIC_USE_SSL: "true"
+      VIDEO_MAX_WATCH_COUNT: 3
+      VIDEO_PLAYBACK_URL_TTL_SECONDS: 360
+    networks: [internal]
+
+  # ---- Caddy: automatic HTTPS reverse proxy, the ONLY container exposed to the internet ----
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on: [backend, minio]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [internal]
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  minio_data:
+  caddy_data:
+  caddy_config:
+
+
+
+
+
+
+
+
+
+
+
+
