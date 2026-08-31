@@ -1,12 +1,15 @@
 import app from './app.js'
 import { connectDB, disconnectDB } from './config/db.js'
 import { env } from './config/env.js'
+import { ensureVideoBucket } from './config/minio.js'
+
 
 let server
 
 async function start() {
   try {
     await connectDB()
+    await ensureVideoBucket()
     server = app.listen(env.port, () => {
       console.log(`API running on http://localhost:${env.port}`)
     })
