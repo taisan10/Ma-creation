@@ -77,6 +77,16 @@ function CategoryPanel({ categories, onDone, setMessage, setError }) {
     } catch (e) { setError(e.message) } finally { setLoading(false) }
   }
 
+  async function removeCategory(cat) {
+  if (!confirm(`Delete category "${cat.name}"? This will also delete ALL of its courses and videos.`)) return
+  setError(''); setMessage('')
+  try {
+    await api(`/admin/lms/categories/${cat._id}`, { method: 'DELETE' })
+    setMessage(`Category "${cat.name}" deleted.`)
+    await onDone()
+  } catch (e) { setError(e.message) }
+}
+
   return (
     <div className="card">
       <div className="flex items-center gap-3">
@@ -94,10 +104,18 @@ function CategoryPanel({ categories, onDone, setMessage, setError }) {
 
       <div className="mt-6 space-y-2">
         {categories.length === 0 ? <p className="text-sm text-muted">No categories yet.</p> : categories.map(cat => (
-          <div key={cat._id} className="border border-border rounded-lg px-4 py-2.5 text-sm flex justify-between">
-            <span>{cat.name}</span><span className="text-muted">{cat.slug}</span>
-          </div>
-        ))}
+  <div key={cat._id} className="border border-border rounded-lg px-4 py-2.5 text-sm flex justify-between items-center gap-2">
+    <span>{cat.name}</span>
+    <span className="flex items-center gap-2">
+      <span className="text-muted">{cat.slug}</span>
+      <button
+        className="text-rust"
+        onClick={() => removeCategory(cat)}
+        title="Delete category (also deletes its courses & videos)"
+      ><Trash2 size={15} /></button>
+    </span>
+  </div>
+))}
       </div>
     </div>
   )
@@ -125,6 +143,17 @@ function CoursePanel({ categories, plans, courses, onDone, setMessage, setError 
       await onDone()
     } catch (e) { setError(e.message) } finally { setLoading(false) }
   }
+   
+  async function removeCourse(course) {
+  if (!confirm(`Delete course "${course.title}"? This will also delete all its videos.`)) return
+  setError(''); setMessage('')
+  try {
+    await api(`/admin/lms/courses/${course._id}`, { method: 'DELETE' })
+    setMessage(`Course "${course.title}" deleted.`)
+    await onDone()
+  } catch (e) { setError(e.message) }
+}
+
 
   return (
     <div className="card">
@@ -156,11 +185,16 @@ function CoursePanel({ categories, plans, courses, onDone, setMessage, setError 
 
       <div className="mt-6 space-y-2">
         {courses.length === 0 ? <p className="text-sm text-muted">No courses yet.</p> : courses.map(course => (
-          <div key={course._id} className="border border-border rounded-lg px-4 py-2.5 text-sm flex justify-between items-center gap-2">
-            <span className="truncate">{course.title}</span>
-            <span className="text-muted text-xs shrink-0">{course.category?.name} · {course.plan?.name}</span>
-          </div>
-        ))}
+  <div key={course._id} className="border border-border rounded-lg px-4 py-2.5 text-sm flex justify-between items-center gap-2">
+    <span className="truncate">{course.title}</span>
+    <span className="flex items-center gap-2 shrink-0">
+      <span className="text-muted text-xs">{course.category?.name} · {course.plan?.name}</span>
+      <button className="text-rust" onClick={() => removeCourse(course)} title="Delete course (also deletes its videos)">
+        <Trash2 size={15} />
+      </button>
+    </span>
+  </div>
+))}
       </div>
     </div>
   )

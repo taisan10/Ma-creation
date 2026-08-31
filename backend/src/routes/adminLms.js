@@ -20,5 +20,7 @@ router.post('/videos', asyncHandler(c.createVideoMeta))
 router.get('/videos', asyncHandler(c.listVideosAdmin))
 router.post('/videos/:id/upload', streamVideoUpload, asyncHandler(c.uploadVideoFile))
 router.delete('/videos/:id', asyncHandler(c.deleteVideo))
+router.delete('/categories/:id', asyncHandler(c.deleteCategory))
+router.delete('/courses/:id', asyncHandler(c.deleteCourse))
 
 export default router

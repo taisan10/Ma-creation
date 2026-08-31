@@ -110,6 +110,46 @@ export async function deleteVideo(req, res) {
   res.json({ success: true })
 }
 
+// DELETE a course: also deletes every video in it + their MinIO files
+export async function deleteCourse(req, res) {
+  const course = await Course.findById(req.params.id)
+  if (!course) throw new AppError('Course not found', 404, 'NOT_FOUND')
+
+  const videos = await Video.find({ course: course._id })
+  for (const video of videos) {
+    if (video.minioObjectKey && !video.minioObjectKey.startsWith('pending/')) {
+      await minioClient.removeObject(VIDEO_BUCKET, video.minioObjectKey).catch(err => {
+        console.error(`[minio] failed to remove object ${video.minioObjectKey}:`, err.message)
+      })
+    }
+  }
+  await Video.deleteMany({ course: course._id })
+  await course.deleteOne()
+  res.json({ success: true })
+}
+
+// DELETE a category: also deletes every course in it + their videos + MinIO files
+export async function deleteCategory(req, res) {
+  const category = await Category.findById(req.params.id)
+  if (!category) throw new AppError('Category not found', 404, 'NOT_FOUND')
+
+  const courses = await Course.find({ category: category._id })
+  const courseIds = courses.map(c => c._id)
+
+  const videos = await Video.find({ course: { $in: courseIds } })
+  for (const video of videos) {
+    if (video.minioObjectKey && !video.minioObjectKey.startsWith('pending/')) {
+      await minioClient.removeObject(VIDEO_BUCKET, video.minioObjectKey).catch(err => {
+        console.error(`[minio] failed to remove object ${video.minioObjectKey}:`, err.message)
+      })
+    }
+  }
+
+  await Video.deleteMany({ course: { $in: courseIds } })
+  await Course.deleteMany({ category: category._id })
+  await category.deleteOne()
+  res.json({ success: true })
+}
 
 // ============================================================
 // CUSTOMER-FACING -- "My Unlocked Courses"
