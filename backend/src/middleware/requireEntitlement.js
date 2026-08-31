@@ -9,7 +9,7 @@ export async function requireCourseEntitlement(req, res, next) {
     const course = await Course.findOne({ _id: req.params.courseId, active: true })
     if (!course) return next(new AppError('Course not found', 404, 'NOT_FOUND'))
 
-    const owns = await Payment.exists({ user: req.user.id, plan: course.plan, status: 'paid' })
+    const owns = await Payment.exists({ user: req.user.sub, plan: course.plan, status: 'paid' })
     if (!owns) {
       return next(new AppError('You have not purchased the plan that unlocks this course', 403, 'NOT_ENTITLED'))
     }
@@ -31,7 +31,7 @@ export async function requireVideoEntitlement(req, res, next) {
     const course = await Course.findOne({ _id: video.course, active: true })
     if (!course) return next(new AppError('Course not found', 404, 'NOT_FOUND'))
  
-    const owns = await Payment.exists({ user: req.user.id, plan: course.plan, status: 'paid' })
+    const owns = await Payment.exists({ user: req.user.sub, plan: course.plan, status: 'paid' })
     if (!owns) {
       return next(new AppError('You have not purchased the plan that unlocks this video', 403, 'NOT_ENTITLED'))
     }

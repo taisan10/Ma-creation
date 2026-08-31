@@ -162,7 +162,7 @@ export async function deleteCategory(req, res) {
 export async function listMyCourses(req, res) {
   // Payment.distinct('plan', ...) returns a de-duplicated array of plan IDs
   // this user has a 'paid' record for -- one query, no loop needed.
-  const paidPlanIds = await Payment.distinct('plan', { user: req.user.id, status: 'paid' })
+  const paidPlanIds = await Payment.distinct('plan', { user: req.user.sub, status: 'paid' })
  
   if (paidPlanIds.length === 0) {
     return res.json({ success: true, categories: [] })
