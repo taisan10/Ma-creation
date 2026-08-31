@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import CheckoutInfoModal from '../../../components/CheckoutInfoModal'
 import { api, getUser } from '../../../lib/api'
 import { useTheme } from '../../../theme'
@@ -20,6 +20,7 @@ function money(value) { return `₹${Number(value || 0).toLocaleString('en-IN')}
 
 export default function PurchaseButton({ planId, planName, alreadyPurchased = false, purchasedOn = null }) {
   const { theme } = useTheme()
+  const navigate = useNavigate()
   const [showModal, setShowModal] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -67,7 +68,18 @@ export default function PurchaseButton({ planId, planName, alreadyPurchased = fa
         try {
           const verified = await api('/payments/verify', { method: 'POST', body: JSON.stringify(response) })
           setPurchase(verified.payment)
-          setMessage('Payment verified successfully. Your purchase details are now available in the client portal.')
+          if (getUser()) {
+            // Logged-in buyer: this is the moment the plan's courses become
+            // unlocked (Course.plan now matches a 'paid' Payment for them --
+            // see requireCourseEntitlement in Part 4). Send them straight to
+            // the page that lists everything they can now watch.
+            setMessage('Payment verified successfully. Redirecting you to your unlocked courses…')
+            setTimeout(() => navigate('/courses'), 1500)
+          } else {
+            // Guest checkout: there's no account yet for courses to attach
+            // to, so we can't send them to /courses (it requires login).
+            setMessage('Payment verified successfully. Create an account or log in to unlock your courses.')
+          }
         } catch (e) {
           setMessage(e.message)
         } finally {

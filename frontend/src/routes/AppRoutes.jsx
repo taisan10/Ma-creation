@@ -7,6 +7,9 @@ import Plans from '../pages/Plans'
 import Login from '../pages/Login'
 import Policies from '../pages/Policies'
 import Account from '../pages/Account'
+import Courses from '../pages/Courses'
+import CourseDetail from '../pages/CourseDetail'
+import WatchVideo from '../pages/WatchVideo'
 import Theme from '../pages/Theme'
 import NotFound from '../pages/NotFound'
 import AdminDashboard from '../pages/admin/AdminDashboard'
@@ -19,6 +22,7 @@ import AdminFaqs from '../pages/admin/AdminFaqs'
 import AdminPartners from '../pages/admin/AdminPartners'
 import AdminSettings from '../pages/admin/AdminSettings'
 import AdminBooks from '../pages/admin/AdminBooks'
+import AdminCourses from '../pages/admin/AdminCourses'
 import { getUser } from '../lib/api'
 
 function AdminRoute({ children }) {
@@ -41,6 +45,9 @@ export default function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/policies" element={<Policies />} />
       <Route path="/account" element={<Account />} />
+       <Route path="/courses" element={<Courses />} />
+      <Route path="/courses/:courseId" element={<CourseDetail />} />
+      <Route path="/courses/:courseId/watch/:videoId" element={<WatchVideo />} />
       <Route path="/theme" element={<Theme />} />
       <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
       <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
@@ -52,6 +59,7 @@ export default function AppRoutes() {
       <Route path="/admin/partners" element={<AdminRoute><AdminPartners /></AdminRoute>} />
       <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
       <Route path="/admin/books" element={<AdminRoute><AdminBooks /></AdminRoute>} />
+      <Route path="/admin/courses" element={<AdminRoute><AdminCourses /></AdminRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   )
