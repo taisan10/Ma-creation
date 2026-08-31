@@ -2,6 +2,7 @@ import { AppError } from '../utils/AppError.js'
 import Category from '../models/Category.js'
 import Course from '../models/Course.js'
 import Video from '../models/Video.js'
+import Payment from '../models/Payment.js'
 import { minioClient, VIDEO_BUCKET } from '../config/minio.js'
 
 // ============================================================
@@ -108,3 +109,68 @@ export async function deleteVideo(req, res) {
   await video.deleteOne()
   res.json({ success: true })
 }
+
+
+// ============================================================
+// CUSTOMER-FACING -- "My Unlocked Courses"
+// ============================================================
+ 
+// Returns every active Course whose `plan` matches a plan this logged-in
+// user has actually paid for (Payment.status === 'paid'). This is what
+// powers the page the user lands on right after payment verification
+// succeeds (see paymentController.verify -> frontend redirect in Part 6).
+export async function listMyCourses(req, res) {
+  // Payment.distinct('plan', ...) returns a de-duplicated array of plan IDs
+  // this user has a 'paid' record for -- one query, no loop needed.
+  const paidPlanIds = await Payment.distinct('plan', { user: req.user.id, status: 'paid' })
+ 
+  if (paidPlanIds.length === 0) {
+    return res.json({ success: true, categories: [] })
+  }
+ 
+  const courses = await Course.find({ plan: { $in: paidPlanIds }, active: true })
+    .populate('category', 'name slug order')
+    .populate('plan', 'name')
+    .sort({ order: 1, createdAt: 1 })
+ 
+  // Group by category so the frontend can render section-by-section
+  // (e.g. "GeM Registration" header, then its courses) without having to
+  // do the grouping itself.
+  const grouped = new Map()
+  for (const course of courses) {
+    const cat = course.category
+    const key = cat?._id?.toString() || 'uncategorized'
+    if (!grouped.has(key)) grouped.set(key, { category: cat, courses: [] })
+    grouped.get(key).courses.push({
+      _id: course._id,
+      title: course.title,
+      description: course.description,
+      thumbnailUrl: course.thumbnailUrl,
+      planName: course.plan?.name
+    })
+  }
+ 
+  res.json({ success: true, categories: Array.from(grouped.values()) })
+}
+ 
+// Requires requireCourseEntitlement (middleware/requireEntitlement.js) to
+// have already run and set req.course -- this handler assumes ownership is
+// already confirmed.
+//
+// IMPORTANT: .select(...) deliberately leaves OUT `minioObjectKey`. The
+// frontend gets everything it needs to render a video list (title,
+// thumbnail, duration) but never the private MinIO storage path. Actual
+// playback links are only issued one-at-a-time, on demand, by the
+// videoController built in Part 5 -- never as part of a list response.
+export async function getCourseVideos(req, res) {
+  const videos = await Video.find({ course: req.course._id, active: true })
+    .select('title description order durationSeconds thumbnailUrl maxWatchCount')
+    .sort({ order: 1, createdAt: 1 })
+ 
+  res.json({
+    success: true,
+    course: { _id: req.course._id, title: req.course.title, description: req.course.description },
+    videos
+  })
+}
+ 

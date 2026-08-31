@@ -11,6 +11,7 @@ import adminRoutes from './routes/admin.js'
 import publicRoutes from './routes/public.js'
 import { publicBooksRouter, adminBooksRouter } from './routes/books.js'
 import adminLmsRoutes from './routes/adminLms.js'
+import courseRoutes from './routes/courses.js'
 import { errorHandler } from './middleware/error.js'
 import { webhook } from './controllers/paymentController.js'
 import mongoose from 'mongoose'
@@ -55,6 +56,7 @@ app.use('/api/public/books', publicBooksRouter)
 app.use('/api/admin', adminRoutes)
 app.use('/api/admin/books', adminBooksRouter)
 app.use('/api/admin/lms', adminLmsRoutes)
+app.use('/api/courses', courseRoutes)
 
 
 app.use(errorHandler)
