@@ -18,7 +18,7 @@ export async function requestPlaybackToken(req, res) {
   // One WatchLog document per (user, video) -- see models/WatchLog.js.
   // If it doesn't exist yet, this user has never watched this video before
   // (count effectively 0), which is fine.
-  const existingLog = await WatchLog.findOne({ user: req.user.id, video: video._id })
+  const existingLog = await WatchLog.findOne({ user: req.user.sub, video: video._id })
   const currentCount = existingLog?.count || 0
 
   if (currentCount >= maxAllowed) {
@@ -40,7 +40,7 @@ export async function requestPlaybackToken(req, res) {
   const expiresAt = new Date(Date.now() + ttlSeconds * 1000)
 
   await PlaybackSession.create({
-    user: req.user.id,
+    user: req.user.sub,
     video: video._id,
     token,
     expiresAt,
@@ -75,7 +75,7 @@ export async function reportWatchEvent(req, res) {
   const { token, type } = req.body
   if (!token || !type) throw new AppError('token and type are required', 400, 'BAD_REQUEST')
 
-  const session = await PlaybackSession.findOne({ token, user: req.user.id, video: req.params.videoId })
+  const session = await PlaybackSession.findOne({ token, user: req.user.sub, video: req.params.videoId })
   if (!session) throw new AppError('Playback session not found or expired', 404, 'SESSION_NOT_FOUND')
 
   if (type === 'started') {
@@ -87,7 +87,7 @@ export async function reportWatchEvent(req, res) {
       await session.save()
 
       await WatchLog.findOneAndUpdate(
-        { user: req.user.id, video: req.params.videoId },
+        { user: req.user.sub, video: req.params.videoId },
         {
           $inc: { count: 1 },
           $set: { lastWatchedAt: new Date() },
@@ -107,7 +107,7 @@ export async function reportWatchEvent(req, res) {
     await session.save()
 
     await WatchLog.findOneAndUpdate(
-      { user: req.user.id, video: req.params.videoId },
+      { user: req.user.sub, video: req.params.videoId },
       { $push: { history: { startedAt: new Date(), suspicious: true, reason: type } } },
       { upsert: true }
     )
@@ -117,7 +117,7 @@ export async function reportWatchEvent(req, res) {
   if (type === 'ended') {
     // Best-effort: record when playback stopped, for admin visibility only.
     await WatchLog.updateOne(
-      { user: req.user.id, video: req.params.videoId, 'history.0': { $exists: true } },
+      { user: req.user.sub, video: req.params.videoId, 'history.0': { $exists: true } },
       { $set: { 'history.$[last].endedAt': new Date() } },
       { arrayFilters: [{ 'last.endedAt': { $exists: false } }] }
     ).catch(() => {}) // non-critical, never fail the request over this
