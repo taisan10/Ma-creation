@@ -1,9 +1,16 @@
 import { Link } from 'react-router-dom'
 
-// Shown when the backend responds with 403 WATCH_LIMIT_REACHED (see Part 5's
-// requestPlaybackToken) -- i.e. the user has already watched this exact
-// video the maximum number of times allowed on their plan.
-export default function WatchLimitModal({ watchCount, maxWatchCount, onClose }) {
+function formatTime(seconds) {
+  if (!seconds || seconds <= 0) return '0m'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = Math.floor(seconds % 60)
+  if (h > 0) return `${h}h ${m}m ${s}s`
+  if (m > 0) return `${m}m ${s}s`
+  return `${s}s`
+}
+
+export default function WatchLimitModal({ totalWatchedSeconds, maxAllowedSeconds, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="card max-w-md w-full text-center py-8 px-6">
@@ -12,7 +19,7 @@ export default function WatchLimitModal({ watchCount, maxWatchCount, onClose }) 
         </div>
         <h2 className="font-display text-xl">Watch limit reached</h2>
         <p className="mt-2 text-sm text-ink/60">
-          You've already watched this video {watchCount} out of {maxWatchCount} allowed times under your
+          You've already watched {formatTime(totalWatchedSeconds)} out of {formatTime(maxAllowedSeconds)} allowed time under your
           current plan. Please see the Plan Guidelines for details, or extend your watch plan to keep
           watching.
         </p>

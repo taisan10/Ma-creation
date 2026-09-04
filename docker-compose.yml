@@ -63,7 +63,7 @@ services:
       # browser -- this must be the real public domain, TLS-terminated by caddy.
       MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_DOMAIN}
       MINIO_PUBLIC_USE_SSL: "true"
-      VIDEO_MAX_WATCH_COUNT: 3
+      VIDEO_WATCH_MULTIPLIER: 2
       VIDEO_PLAYBACK_URL_TTL_SECONDS: 360
     networks: [internal]
 

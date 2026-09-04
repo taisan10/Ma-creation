@@ -68,6 +68,7 @@ export default function PurchaseButton({ planId, planName, alreadyPurchased = fa
         try {
           const verified = await api('/payments/verify', { method: 'POST', body: JSON.stringify(response) })
           setPurchase(verified.payment)
+          window.dispatchEvent(new Event('courses-updated'))
           if (getUser()) {
             // Logged-in buyer: this is the moment the plan's courses become
             // unlocked (Course.plan now matches a 'paid' Payment for them --

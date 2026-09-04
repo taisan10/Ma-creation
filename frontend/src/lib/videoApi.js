@@ -1,5 +1,10 @@
 import { api } from './api'
 
+
+export function hasPaidCourses() {
+  return api('/courses/has-access')
+}
+
 // Returns { categories: [{ category, courses: [...] }] } -- courses the
 // logged-in user has actually paid for, grouped by category. Powers
 // CoursesUnlockedPage.
@@ -24,9 +29,9 @@ export function requestPlaybackToken(videoId) {
 // Reports what actually happened during playback: 'started', 'ended',
 // 'recording_suspected', or 'incognito_suspected'. Used by Part 7's player
 // and Part 8's detection logic.
-export function reportWatchEvent(videoId, token, type) {
+export function reportWatchEvent(videoId, token, type, seconds = 0 ) {
   return api(`/videos/${videoId}/watch-event`, {
     method: 'POST',
-    body: JSON.stringify({ token, type })
+    body: JSON.stringify({ token, type, seconds })
   })
 }

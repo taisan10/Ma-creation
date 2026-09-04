@@ -4,7 +4,20 @@ import Course from '../models/Course.js'
 import Video from '../models/Video.js'
 import Payment from '../models/Payment.js'
 import { minioClient, VIDEO_BUCKET } from '../config/minio.js'
+import ffmpeg from 'fluent-ffmpeg'
 
+function detectVideoDuration(bucket, objectKey) {
+  return new Promise((resolve, reject) => {
+    const stream = minioClient.getObject(bucket, objectKey)
+    ffmpeg(stream)
+      .on('ffprobe', (__, data) => {
+        const duration = data.format?.duration
+        resolve(duration ? Math.ceil(duration) : 0)
+      })
+      .on('error', reject)
+      .ffprobe(['-v', 'quiet', '-print_format', 'json', '-show_format'])
+  })
+}
 // ============================================================
 // ADMIN -- Category
 // ============================================================
@@ -48,7 +61,7 @@ export async function listCoursesAdmin(req, res) {
 // stays false so it can never appear on the public unlock page until a real
 // file has actually landed in MinIO (see uploadVideoFile below).
 export async function createVideoMeta(req, res) {
-  const { course, title, description, order, durationSeconds, maxWatchCount } = req.body
+  const { course, title, description, order, durationSeconds, maxWatchMultiplier } = req.body
   if (!course || !title) throw new AppError('course and title are required', 400, 'BAD_REQUEST')
 
   const video = await Video.create({
@@ -57,7 +70,7 @@ export async function createVideoMeta(req, res) {
     description,
     order,
     durationSeconds,
-    maxWatchCount,
+    maxWatchMultiplier,
     minioObjectKey: `pending/${Date.now()}`,
     active: false
   })
@@ -82,6 +95,17 @@ export async function uploadVideoFile(req, res) {
   video.minioObjectKey = req.uploadedVideo.objectKey
   video.mimeType = req.uploadedVideo.mimeType
   video.active = true
+  
+if (!video.durationSeconds || video.durationSeconds === 0) {
+  try {
+    const duration = await detectVideoDuration(VIDEO_BUCKET, video.minioObjectKey)
+    if (duration > 0) video.durationSeconds = duration
+  } catch (err) {
+    console.error(`[video] Could not auto-detect duration for ${video._id}:`, err.message)
+  }
+}
+
+
   await video.save()
 
   // Re-upload case: if this video already pointed at a real (non-placeholder)
@@ -154,6 +178,17 @@ export async function deleteCategory(req, res) {
 // ============================================================
 // CUSTOMER-FACING -- "My Unlocked Courses"
 // ============================================================
+
+// Lightweight check for the header: does this user own any paid plan
+// that has at least one active course? Returns just a boolean -- avoids
+// sending the full course list to the public header on every page.
+export async function hasAnyPaidCourse(req, res) {
+  const paidPlanIds = await Payment.distinct('plan', { user: req.user.sub, status: 'paid' })
+  const count = paidPlanIds.length
+    ? await Course.countDocuments({ plan: { $in: paidPlanIds }, active: true })
+    : 0
+  res.json({ success: true, hasCourses: count > 0 })
+}
  
 // Returns every active Course whose `plan` matches a plan this logged-in
 // user has actually paid for (Payment.status === 'paid'). This is what
@@ -204,7 +239,7 @@ export async function listMyCourses(req, res) {
 // videoController built in Part 5 -- never as part of a list response.
 export async function getCourseVideos(req, res) {
   const videos = await Video.find({ course: req.course._id, active: true })
-    .select('title description order durationSeconds thumbnailUrl maxWatchCount')
+    .select('title description order durationSeconds thumbnailUrl maxWatchMultiplier')
     .sort({ order: 1, createdAt: 1 })
  
   res.json({

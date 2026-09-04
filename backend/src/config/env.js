@@ -25,7 +25,7 @@ export const env = {
     String(
       process.env.MINIO_PUBLIC_USE_SSL ?? process.env.MINIO_USE_SSL,
     ).toLowerCase() === "true",
-  videoMaxWatchCount: Number(process.env.VIDEO_MAX_WATCH_COUNT || 3),
+  videoWatchMultiplier: Number(process.env.VIDEO_WATCH_MULTIPLIER || 2),
   videoPlaybackUrlTtlSeconds: Number(
     process.env.VIDEO_PLAYBACK_URL_TTL_SECONDS || 360,
   ),

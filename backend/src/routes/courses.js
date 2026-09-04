@@ -10,6 +10,7 @@ const router = Router()
 // of paid course content, unlike e.g. the public catalog/plans routes.
 router.use(authenticate)
 
+router.get('/has-access', asyncHandler(c.hasAnyPaidCourse))
 router.get('/mine', asyncHandler(c.listMyCourses))
 router.get('/:courseId/videos', requireCourseEntitlement, asyncHandler(c.getCourseVideos))
 

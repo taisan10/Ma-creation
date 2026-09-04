@@ -20,6 +20,8 @@ const ProtectedVideoPlayer = forwardRef(function ProtectedVideoPlayer({ videoId,
   const videoRef = useRef(null)
   const sessionRef = useRef(null) // { token }
   const countedRef = useRef(false) // guards against double-counting client-side too
+  const startTimeRef = useRef(null) // tracks when playback started for duration calc
+  const heartbeatRef = useRef(null)
 
   const [state, setState] = useState('loading') // loading | ready | blocked | error | recording_blocked
   const [playback, setPlayback] = useState(null) // { url, watchCount, maxWatchCount }
@@ -28,6 +30,8 @@ const ProtectedVideoPlayer = forwardRef(function ProtectedVideoPlayer({ videoId,
   const loadToken = useCallback(async () => {
     setState('loading')
     countedRef.current = false
+     startTimeRef.current = null
+    heartbeatRef.current = null
     try {
       const data = await requestPlaybackToken(videoId)
       sessionRef.current = { token: data.sessionToken }
@@ -52,19 +56,54 @@ const ProtectedVideoPlayer = forwardRef(function ProtectedVideoPlayer({ videoId,
   // currentTime crosses COUNT_AFTER_SECONDS, and only once per session
   // (countedRef), then report 'started' to the backend so WatchLog.count
   // actually increments (see Part 5's reportWatchEvent).
+
   function handleTimeUpdate() {
     const el = videoRef.current
-    if (!el || countedRef.current) return
-    if (el.currentTime >= COUNT_AFTER_SECONDS) {
+    if (!el) return
+
+    if (!startTimeRef.current) {
+      startTimeRef.current = Date.now()
+    }
+
+    if (!countedRef.current && el.currentTime >= COUNT_AFTER_SECONDS) {
       countedRef.current = true
+      const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000)
       const token = sessionRef.current?.token
-      if (token) reportWatchEvent(videoId, token, 'started').catch(() => {})
+      if (token) reportWatchEvent(videoId, token, 'started', elapsed).catch(() => {})
+        startTimeRef.current = Date.now()
+         heartbeatRef.current = Date.now()
+
+    }
+
+    // Heartbeat: every 30 seconds, report accumulated time
+    const now = Date.now()
+    if (!heartbeatRef.current || now - heartbeatRef.current >= 30000) {
+      heartbeatRef.current = now
+      const elapsed = Math.floor((now - startTimeRef.current) / 1000)
+      const token = sessionRef.current?.token
+       if (token && countedRef.current) {
+        reportWatchEvent(videoId, token, 'heartbeat', elapsed)
+          .then(res => {
+            if (res?.watchLimitReached) {
+              setState('blocked')
+            }
+          })
+          .catch(() => {})
+        // Reset startTimeRef so next heartbeat measures from this point
+        startTimeRef.current = now
+      }
     }
   }
 
-  function handleEnded() {
+   function handleEnded() {
     const token = sessionRef.current?.token
-    if (token) reportWatchEvent(videoId, token, 'ended').catch(() => {})
+    if (token) {
+      const elapsed = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0
+      if (elapsed > 0) reportWatchEvent(videoId, token, 'ended', elapsed).catch(() => {})
+    }
+     countedRef.current = false
+    startTimeRef.current = null
+    heartbeatRef.current = null
   }
 
   // This is the function Part 8 calls to unmount playback + report the flag.
@@ -94,8 +133,9 @@ const ProtectedVideoPlayer = forwardRef(function ProtectedVideoPlayer({ videoId,
   if (state === 'blocked') {
     return (
       <WatchLimitModal
-        watchCount={playback?.watchCount ?? 3}
-        maxWatchCount={playback?.maxWatchCount ?? 3}
+        totalWatchedSeconds={playback?.totalWatchedSeconds ?? 0}
+        maxAllowedSeconds={playback?.maxAllowedSeconds ?? 0}
+
         onClose={() => window.history.back()}
       />
     )
@@ -136,7 +176,8 @@ const ProtectedVideoPlayer = forwardRef(function ProtectedVideoPlayer({ videoId,
         className="w-full rounded-lg bg-black aspect-video"
       />
       <p className="mt-2 text-xs text-ink/40">
-        {title} — {playback.watchesRemaining} watch{playback.watchesRemaining === 1 ? '' : 'es'} remaining
+        {title} — {Math.floor(playback.remainingSeconds / 60)}m {playback.remainingSeconds % 60}s remaining
+
       </p>
     </div>
   )

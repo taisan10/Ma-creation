@@ -6,6 +6,7 @@ WORKDIR /app
 # dependencies actually changed -- rebuilds after a plain code edit are fast.
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
+RUN apk add --no-cache ffmpeg 
 
 COPY . .
 

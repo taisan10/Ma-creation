@@ -208,6 +208,7 @@ function VideoPanel({ courses, videos, setVideos, setMessage, setError }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [file, setFile] = useState(null)
+  const [detectedDuration, setDetectedDuration] = useState(0)
   const [uploading, setUploading] = useState(false)
   const inputRef = useRef(null)
 
@@ -221,6 +222,21 @@ function VideoPanel({ courses, videos, setVideos, setMessage, setError }) {
 
   useEffect(() => { loadVideos(course) }, [course])
 
+  function handleFileChange(e) {
+  const selectedFile = e.target.files?.[0] || null
+  setFile(selectedFile)
+  setDetectedDuration(0)
+  if (selectedFile) {
+    const vid = document.createElement('video')
+    vid.preload = 'metadata'
+    vid.onloadedmetadata = () => {
+      setDetectedDuration(Math.ceil(vid.duration))
+      URL.revokeObjectURL(vid.src)
+    }
+    vid.src = URL.createObjectURL(selectedFile)
+  }
+}
+
   async function submit(e) {
     e.preventDefault()
     setError(''); setMessage('')
@@ -230,10 +246,13 @@ function VideoPanel({ courses, videos, setVideos, setMessage, setError }) {
     setUploading(true)
     try {
       // Step 1: create the metadata record (JSON, no file yet) -- see Part 3.
-      const created = await api('/admin/lms/videos', {
-        method: 'POST',
-        body: JSON.stringify({ course, title, description })
-      })
+      // File select hone pe duration detect karo
+
+// Step 1 request mein duration bhejo
+const created = await api('/admin/lms/videos', {
+  method: 'POST',
+  body: JSON.stringify({ course, title, description, durationSeconds: detectedDuration })
+})
       const videoId = created.video._id
 
       // Step 2: stream the actual file into MinIO. Field name MUST be
@@ -289,7 +308,7 @@ function VideoPanel({ courses, videos, setVideos, setMessage, setError }) {
             ref={inputRef}
             type="file"
             accept="video/mp4,video/webm,video/quicktime"
-            onChange={e => setFile(e.target.files?.[0] || null)}
+            onChange={handleFileChange}
             className="block w-full text-sm"
             required
           />
@@ -297,7 +316,10 @@ function VideoPanel({ courses, videos, setVideos, setMessage, setError }) {
             <div className="mt-4 rounded-lg border border-border bg-paper2 px-4 py-3 text-sm flex items-center gap-3">
               <VideoIcon size={18} />
               <span className="min-w-0 truncate">{file.name}</span>
-              <span className="text-muted ml-auto">{(file.size / 1024 / 1024).toFixed(1)} MB</span>
+               <span className="text-muted ml-auto">
+      {detectedDuration > 0 ? `${Math.floor(detectedDuration/60)}m ${detectedDuration%60}s` : '...'} 
+      · {(file.size / 1024 / 1024).toFixed(1)} MB
+    </span>
             </div>
           )}
           <button className="btn-gold btn-sm mt-5" disabled={uploading}>

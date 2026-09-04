@@ -1,11 +1,12 @@
 import mongoose from "mongoose";
 
-// ONE document per (user, video) pair. `count` is the server-authoritative
-// number of times this user has watched this video -- this is the field the
-// "max 3 watches" rule is enforced against. It is NEVER incremented directly
-// from a client request; it's only incremented inside videoController when a
-// PlaybackSession reports a genuine "started" event (see Part 5), so
-// clearing localStorage / using a new browser tab cannot reset or fake it.
+// ONE document per (user, video) pair. `totalWatchedSeconds` is the
+// server-authoritative cumulative seconds this user has watched this video.
+// Enforced against: totalWatchedSeconds >= video.durationSeconds * multiplier.
+// NEVER incremented directly from a client request; it's only incremented
+// inside videoController when a PlaybackSession reports a genuine playback
+// duration, so clearing localStorage / using a new browser tab cannot fake it.
+
 const historyEntrySchema = new mongoose.Schema(
   {
     startedAt: { type: Date, default: Date.now },
@@ -30,7 +31,7 @@ const schema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    count: { type: Number, default: 0 },
+    totalWatchedSeconds: { type: Number, default: 0 },
     lastWatchedAt: Date,
     history: [historyEntrySchema],
   },

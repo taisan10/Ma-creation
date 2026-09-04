@@ -22,10 +22,10 @@ const schema = new mongoose.Schema(
     fileSizeBytes: { type: Number },
     mimeType: { type: String, default: "video/mp4" },
 
-    // Per-video override of the global VIDEO_MAX_WATCH_COUNT env default (3).
-    // Lets admins grant a specific video more/fewer allowed watches without
-    // touching env vars, e.g. a short intro video could be unlimited.
-    maxWatchCount: { type: Number, default: null },
+     // Per-video override of the global VIDEO_WATCH_MULTIPLIER env default (2).
+    // e.g. multiplier 2 means user can watch totalDuration * 2 seconds.
+    // null = use global env default.
+    maxWatchMultiplier: { type: Number, default: null },
 
     active: { type: Boolean, default: true },
   },
