@@ -2,11 +2,29 @@
 # domain you list here, as long as its DNS A record already points at this
 # VPS's IP. No certbot, no manual cert renewal cron job needed.
 
-api.yourdomain.com {
-    reverse_proxy backend:5000
+# api.yourdomain.com {
+    # reverse_proxy backend:5000
+# }
+
+# cdn.yourdomain.com {
+#     reverse_proxy minio:9000
+#     request_body {
+#         max_size 0
+#     }
+# }
+
+
+{$APP_DOMAIN:yourdomain.com} {
+    @api path /api/*
+    handle @api {
+        reverse_proxy backend:5000
+    }
+    handle {
+        reverse_proxy frontend:80
+    }
 }
 
-cdn.yourdomain.com {
+{$CDN_DOMAIN:cdn.yourdomain.com} {
     reverse_proxy minio:9000
     request_body {
         max_size 0

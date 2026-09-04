@@ -66,12 +66,24 @@ services:
       VIDEO_WATCH_MULTIPLIER: 2
       VIDEO_PLAYBACK_URL_TTL_SECONDS: 360
     networks: [internal]
+  
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks: [internal]
+
+  
 
   # ---- Caddy: automatic HTTPS reverse proxy, the ONLY container exposed to the internet ----
   caddy:
     image: caddy:2
     restart: unless-stopped
-    depends_on: [backend, minio]
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      CDN_DOMAIN: ${CDN_DOMAIN}
+    depends_on: [backend, minio, frontend]
     ports:
       - "80:80"
       - "443:443"
