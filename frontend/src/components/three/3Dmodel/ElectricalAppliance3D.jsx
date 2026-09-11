@@ -144,9 +144,7 @@ export default function ElectricalAppliance3D({ compact = false }) {
 
     // ===== Light bulb (component) =====
     makeCuboid({ w: 12, h: 14, d: 12, x: -150, y: 38, z: 85, colors: DARK, radius: 2 });
-    Array.from({ length: 3 }, (_, i) => {
-      mk2d(null, {});
-    });
+   
     const glass = makeCuboid({
       w: 20, h: 26, d: 20,
       x: -150, y: 17, z: 85,
