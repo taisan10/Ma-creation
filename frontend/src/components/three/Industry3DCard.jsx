@@ -1,4 +1,11 @@
 
+import FurnitureChair3D from './3Dmodel/FurnitureChair3D'
+import StationeryNotebook3D from './3Dmodel/StationeryNotebook3D'
+import MedicalProducts3D from './3Dmodel/MedicalProducts3D'
+import ITProducts3D from './3Dmodel/ITProducts3D'
+import Automobiles3D from './3Dmodel/Automobiles3D'
+import ElectronicsEquipment3D from './3Dmodel/ElectronicsEquipment3D'
+import ElectricalAppliance3D from './3Dmodel/ElectricalAppliance3D'
 
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Float, RoundedBox } from '@react-three/drei'
@@ -874,10 +881,27 @@ export default function Industry3DCard({
   return (
     <div className="group card p-0 overflow-hidden hover:-translate-y-2">
 
-      <LazyIndustryCanvas
-        type={type}
-        theme={theme}
-      />
+{(type === 'furniture' || type === 'stationery' || type === 'medical' || type === 'it' || type === 'automobiles' || type === 'electronics' || type === 'electrical') ? (
+  <div className="industry-3d-scene bg-brand-gradient/30 relative">
+    {type === 'furniture'
+      ? <FurnitureChair3D compact={true} />
+      : type === 'stationery'
+      ? <StationeryNotebook3D compact={true} />
+      : type === 'medical'
+      ? <MedicalProducts3D compact={true} />
+      : type === 'it'
+      ? <ITProducts3D compact={true} />
+      : type === 'automobiles'
+      ? <Automobiles3D compact={true} />
+      : type === 'electronics'
+      ? <ElectronicsEquipment3D compact={true} />
+      : <ElectricalAppliance3D compact={true} />}
+    <div className="industry-3d-label">3D</div>
+  </div>
+) : (
+  <LazyIndustryCanvas type={type} theme={theme} />
+)}
+
 
       <div className="p-5">
         <h3 className="font-display text-xl font-semibold text-text">
