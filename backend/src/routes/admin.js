@@ -50,4 +50,11 @@ router.put(
   validate(z.object({ value: z.any() })),
   asyncHandler(c.upsertSetting),
 );
+
+// Security & Screen Recording Incidents Management
+router.get("/security-incidents", asyncHandler(c.listSecurityIncidents));
+router.post("/security-incidents/:id/resolve", asyncHandler(c.resolveSecurityIncident));
+router.post("/security-incidents/:id/revoke-plan", asyncHandler(c.revokePlanFromIncident));
+router.post("/security-incidents/:id/ban-user", asyncHandler(c.banUserFromIncident));
+
 export default router;

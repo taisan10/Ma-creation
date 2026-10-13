@@ -10,6 +10,10 @@ export const env = {
   razorpayWebhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET,
   bookMaxBytes: Number(process.env.BOOK_MAX_BYTES || 50 * 1024 * 1024),
 
+  // --- Admin credentials ---
+  adminEmail: process.env.ADMIN_EMAIL || "admin@macreation.in",
+  adminPassword: process.env.ADMIN_PASSWORD || "Admin@12345",
+
   // --- MinIO / video storage ---
   minioEndpoint: process.env.MINIO_ENDPOINT || "127.0.0.1",
   minioPort: Number(process.env.MINIO_PORT || 9000),

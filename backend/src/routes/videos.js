@@ -17,4 +17,15 @@ router.post('/:videoId/playback-token', requireVideoEntitlement, asyncHandler(c.
 // so a session belonging to someone else simply won't be found.
 router.post('/:videoId/watch-event', asyncHandler(c.reportWatchEvent))
 
+// Secure AES-128 Key Delivery for HLS Decryption
+// Protected by requireVideoEntitlement (purchased plan or admin) + watch quota check
+router.get('/:videoId/key', requireVideoEntitlement, asyncHandler(c.getVideoKey))
+
+// Stream HLS AES-128 Encrypted Playlist & Segments
+router.get('/:videoId/hls/manifest.m3u8', requireVideoEntitlement, asyncHandler(c.getHlsManifest))
+router.get('/:videoId/hls/:segment', requireVideoEntitlement, asyncHandler(c.getHlsSegment))
+
+// Transcode video into AES-128 HLS (accessible by admin/entitled)
+router.post('/:videoId/transcode-hls', requireVideoEntitlement, asyncHandler(c.transcodeVideoHls))
+
 export default router

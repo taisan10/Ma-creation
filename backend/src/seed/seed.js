@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import { connectDB } from "../config/db.js";
+import { env } from "../config/env.js";
 import User from "../models/User.js";
 import Service from "../models/Service.js";
 import Plan from "../models/Plan.js";
@@ -603,14 +604,14 @@ await Service.insertMany(services);
 await Plan.insertMany(plans);
 await Page.insertMany(pages);
 await FAQ.insertMany(faqs);
-if (!(await User.exists({ email: "admin@macreation.in" }))) {
+if (!(await User.exists({ email: env.adminEmail }))) {
   const passwordHash = await bcrypt.hash(
-    process.env.ADMIN_SEED_PASSWORD || "ChangeMe@12345",
+    env.adminPassword,
     12,
   );
   await User.create({
     name: "MA Creation Admin",
-    email: "admin@macreation.in",
+    email: env.adminEmail,
     phone: "9999999999",
     company: "MA Creation",
     passwordHash,

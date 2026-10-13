@@ -27,6 +27,11 @@ const schema = new mongoose.Schema(
     // null = use global env default.
     maxWatchMultiplier: { type: Number, default: null },
 
+    // HLS AES-128 DRM stream fields
+    isHlsReady: { type: Boolean, default: false },
+    hlsDirectory: { type: String, trim: true },
+    hlsManifestKey: { type: String, trim: true },
+
     active: { type: Boolean, default: true },
   },
   { timestamps: true },

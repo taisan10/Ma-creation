@@ -16,6 +16,7 @@ import videoRoutes from './routes/videos.js'
 import { errorHandler } from './middleware/error.js'
 import { webhook } from './controllers/paymentController.js'
 import mongoose from 'mongoose'
+import cookieParser from 'cookie-parser'
 
 assertProductionEnv()
 
@@ -30,6 +31,8 @@ app.use(rateLimit({
   legacyHeaders: false,
   skip: req => process.env.NODE_ENV !== 'production' || req.path === '/api/public/events',
 }))
+
+app.use(cookieParser())
 
 // Razorpay signature verification needs the untouched request body.
 app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), (req, res, next) => {

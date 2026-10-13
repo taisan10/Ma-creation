@@ -1,251 +1,70 @@
-import { AppError } from '../utils/AppError.js'
-import Category from '../models/Category.js'
-import Course from '../models/Course.js'
-import Video from '../models/Video.js'
-import Payment from '../models/Payment.js'
-import { minioClient, VIDEO_BUCKET } from '../config/minio.js'
-import ffmpeg from 'fluent-ffmpeg'
-
-function detectVideoDuration(bucket, objectKey) {
-  return new Promise((resolve, reject) => {
-    const stream = minioClient.getObject(bucket, objectKey)
-    ffmpeg(stream)
-      .on('ffprobe', (__, data) => {
-        const duration = data.format?.duration
-        resolve(duration ? Math.ceil(duration) : 0)
-      })
-      .on('error', reject)
-      .ffprobe(['-v', 'quiet', '-print_format', 'json', '-show_format'])
-  })
-}
-// ============================================================
-// ADMIN -- Category
-// ============================================================
+import { CourseService } from '../services/course.service.js'
 
 export async function createCategory(req, res) {
-  const { name, slug, description, order } = req.body
-  if (!name || !slug) throw new AppError('name and slug are required', 400, 'BAD_REQUEST')
-  const category = await Category.create({ name, slug, description, order })
+  const category = await CourseService.createCategory(req.body)
   res.status(201).json({ success: true, category })
 }
 
 export async function listCategoriesAdmin(req, res) {
-  const categories = await Category.find().sort({ order: 1, createdAt: 1 })
+  const categories = await CourseService.listCategoriesAdmin()
   res.json({ success: true, categories })
 }
 
-// ============================================================
-// ADMIN -- Course
-// ============================================================
-
 export async function createCourse(req, res) {
-  const { category, plan, title, description, thumbnailUrl, order } = req.body
-  if (!category || !plan || !title) throw new AppError('category, plan and title are required', 400, 'BAD_REQUEST')
-  const course = await Course.create({ category, plan, title, description, thumbnailUrl, order })
+  const course = await CourseService.createCourse(req.body)
   res.status(201).json({ success: true, course })
 }
 
 export async function listCoursesAdmin(req, res) {
-  const courses = await Course.find()
-    .populate('category', 'name slug')
-    .populate('plan', 'name price')
-    .sort({ order: 1, createdAt: 1 })
+  const courses = await CourseService.listCoursesAdmin()
   res.json({ success: true, courses })
 }
 
-// ============================================================
-// ADMIN -- Video (two-step create: metadata first, file upload second)
-// ============================================================
-
-// Step 1: create the Video record with a placeholder storage key. `active`
-// stays false so it can never appear on the public unlock page until a real
-// file has actually landed in MinIO (see uploadVideoFile below).
 export async function createVideoMeta(req, res) {
-  const { course, title, description, order, durationSeconds, maxWatchMultiplier } = req.body
-  if (!course || !title) throw new AppError('course and title are required', 400, 'BAD_REQUEST')
-
-  const video = await Video.create({
-    course,
-    title,
-    description,
-    order,
-    durationSeconds,
-    maxWatchMultiplier,
-    minioObjectKey: `pending/${Date.now()}`,
-    active: false
-  })
+  const video = await CourseService.createVideoMeta(req.body)
   res.status(201).json({ success: true, video })
 }
 
 export async function listVideosAdmin(req, res) {
-  const { courseId } = req.query
-  const filter = courseId ? { course: courseId } : {}
-  const videos = await Video.find(filter).sort({ order: 1, createdAt: 1 })
+  const videos = await CourseService.listVideosAdmin(req.query.courseId)
   res.json({ success: true, videos })
 }
 
-// Step 2: called AFTER streamVideoUpload middleware has already streamed the
-// file into MinIO -- req.uploadedVideo = { objectKey, mimeType } is set by
-// that middleware. This handler just finalizes the DB record.
 export async function uploadVideoFile(req, res) {
-  const video = await Video.findById(req.params.id)
-  if (!video) throw new AppError('Video not found', 404, 'NOT_FOUND')
-
-  const previousKey = video.minioObjectKey
-  video.minioObjectKey = req.uploadedVideo.objectKey
-  video.mimeType = req.uploadedVideo.mimeType
-  video.active = true
-  
-if (!video.durationSeconds || video.durationSeconds === 0) {
-  try {
-    const duration = await detectVideoDuration(VIDEO_BUCKET, video.minioObjectKey)
-    if (duration > 0) video.durationSeconds = duration
-  } catch (err) {
-    console.error(`[video] Could not auto-detect duration for ${video._id}:`, err.message)
-  }
-}
-
-
-  await video.save()
-
-  // Re-upload case: if this video already pointed at a real (non-placeholder)
-  // MinIO object, delete the old one so storage doesn't fill up with orphaned
-  // files nobody references anymore. Done fire-and-forget so it doesn't slow
-  // down the admin's response.
-  if (previousKey && !previousKey.startsWith('pending/')) {
-    minioClient.removeObject(VIDEO_BUCKET, previousKey).catch(err => {
-      console.error(`[minio] failed to remove superseded object ${previousKey}:`, err.message)
-    })
-  }
-
+  const video = await CourseService.finalizeVideoUpload(req.params.id, req.uploadedVideo)
   res.json({ success: true, video })
 }
 
 export async function deleteVideo(req, res) {
-  const video = await Video.findById(req.params.id)
-  if (!video) throw new AppError('Video not found', 404, 'NOT_FOUND')
-
-  if (video.minioObjectKey && !video.minioObjectKey.startsWith('pending/')) {
-    await minioClient.removeObject(VIDEO_BUCKET, video.minioObjectKey).catch(err => {
-      console.error(`[minio] failed to remove object ${video.minioObjectKey}:`, err.message)
-    })
-  }
-  await video.deleteOne()
+  await CourseService.deleteVideo(req.params.id)
   res.json({ success: true })
 }
 
-// DELETE a course: also deletes every video in it + their MinIO files
 export async function deleteCourse(req, res) {
-  const course = await Course.findById(req.params.id)
-  if (!course) throw new AppError('Course not found', 404, 'NOT_FOUND')
-
-  const videos = await Video.find({ course: course._id })
-  for (const video of videos) {
-    if (video.minioObjectKey && !video.minioObjectKey.startsWith('pending/')) {
-      await minioClient.removeObject(VIDEO_BUCKET, video.minioObjectKey).catch(err => {
-        console.error(`[minio] failed to remove object ${video.minioObjectKey}:`, err.message)
-      })
-    }
-  }
-  await Video.deleteMany({ course: course._id })
-  await course.deleteOne()
+  await CourseService.deleteCourse(req.params.id)
   res.json({ success: true })
 }
 
-// DELETE a category: also deletes every course in it + their videos + MinIO files
 export async function deleteCategory(req, res) {
-  const category = await Category.findById(req.params.id)
-  if (!category) throw new AppError('Category not found', 404, 'NOT_FOUND')
-
-  const courses = await Course.find({ category: category._id })
-  const courseIds = courses.map(c => c._id)
-
-  const videos = await Video.find({ course: { $in: courseIds } })
-  for (const video of videos) {
-    if (video.minioObjectKey && !video.minioObjectKey.startsWith('pending/')) {
-      await minioClient.removeObject(VIDEO_BUCKET, video.minioObjectKey).catch(err => {
-        console.error(`[minio] failed to remove object ${video.minioObjectKey}:`, err.message)
-      })
-    }
-  }
-
-  await Video.deleteMany({ course: { $in: courseIds } })
-  await Course.deleteMany({ category: category._id })
-  await category.deleteOne()
+  await CourseService.deleteCategory(req.params.id)
   res.json({ success: true })
 }
 
-// ============================================================
-// CUSTOMER-FACING -- "My Unlocked Courses"
-// ============================================================
-
-// Lightweight check for the header: does this user own any paid plan
-// that has at least one active course? Returns just a boolean -- avoids
-// sending the full course list to the public header on every page.
 export async function hasAnyPaidCourse(req, res) {
-  const paidPlanIds = await Payment.distinct('plan', { user: req.user.sub, status: 'paid' })
-  const count = paidPlanIds.length
-    ? await Course.countDocuments({ plan: { $in: paidPlanIds }, active: true })
-    : 0
-  res.json({ success: true, hasCourses: count > 0 })
+  const hasCourses = await CourseService.hasAnyPaidCourse(req.user.sub)
+  res.json({ success: true, hasCourses })
 }
- 
-// Returns every active Course whose `plan` matches a plan this logged-in
-// user has actually paid for (Payment.status === 'paid'). This is what
-// powers the page the user lands on right after payment verification
-// succeeds (see paymentController.verify -> frontend redirect in Part 6).
+
 export async function listMyCourses(req, res) {
-  // Payment.distinct('plan', ...) returns a de-duplicated array of plan IDs
-  // this user has a 'paid' record for -- one query, no loop needed.
-  const paidPlanIds = await Payment.distinct('plan', { user: req.user.sub, status: 'paid' })
- 
-  if (paidPlanIds.length === 0) {
-    return res.json({ success: true, categories: [] })
-  }
- 
-  const courses = await Course.find({ plan: { $in: paidPlanIds }, active: true })
-    .populate('category', 'name slug order')
-    .populate('plan', 'name')
-    .sort({ order: 1, createdAt: 1 })
- 
-  // Group by category so the frontend can render section-by-section
-  // (e.g. "GeM Registration" header, then its courses) without having to
-  // do the grouping itself.
-  const grouped = new Map()
-  for (const course of courses) {
-    const cat = course.category
-    const key = cat?._id?.toString() || 'uncategorized'
-    if (!grouped.has(key)) grouped.set(key, { category: cat, courses: [] })
-    grouped.get(key).courses.push({
-      _id: course._id,
-      title: course.title,
-      description: course.description,
-      thumbnailUrl: course.thumbnailUrl,
-      planName: course.plan?.name
-    })
-  }
- 
-  res.json({ success: true, categories: Array.from(grouped.values()) })
+  const categories = await CourseService.listUserCourses(req.user.sub)
+  res.json({ success: true, categories })
 }
- 
-// Requires requireCourseEntitlement (middleware/requireEntitlement.js) to
-// have already run and set req.course -- this handler assumes ownership is
-// already confirmed.
-//
-// IMPORTANT: .select(...) deliberately leaves OUT `minioObjectKey`. The
-// frontend gets everything it needs to render a video list (title,
-// thumbnail, duration) but never the private MinIO storage path. Actual
-// playback links are only issued one-at-a-time, on demand, by the
-// videoController built in Part 5 -- never as part of a list response.
+
 export async function getCourseVideos(req, res) {
-  const videos = await Video.find({ course: req.course._id, active: true })
-    .select('title description order durationSeconds thumbnailUrl maxWatchMultiplier')
-    .sort({ order: 1, createdAt: 1 })
- 
+  const videos = await CourseService.getCourseVideos(req.course._id)
   res.json({
     success: true,
     course: { _id: req.course._id, title: req.course.title, description: req.course.description },
-    videos
+    videos,
   })
 }
- 

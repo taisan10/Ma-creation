@@ -1,4 +1,11 @@
-import Service from '../models/Service.js'
-import Plan from '../models/Plan.js'
-export async function listServices(req,res){res.json({success:true,services:await Service.find({active:true}).sort({category:1,price:1})})}
-export async function listPlans(req,res){res.json({success:true,plans:await Plan.find({active:true}).sort({category:1,price:1})})}
+import { CatalogService } from '../services/catalog.service.js'
+
+export async function listServices(req, res) {
+  const services = await CatalogService.getActiveServices()
+  res.json({ success: true, services })
+}
+
+export async function listPlans(req, res) {
+  const plans = await CatalogService.getActivePlans()
+  res.json({ success: true, plans })
+}
