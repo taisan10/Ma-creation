@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Users, Inbox, CreditCard, Boxes, FileText, HelpCircle, Settings, LogOut, ArrowLeft, Menu, X, BookOpen, GraduationCap } from 'lucide-react'
+import { LayoutDashboard, Users, Inbox, CreditCard, Boxes, FileText, HelpCircle, Settings, LogOut, ArrowLeft, Menu, X, BookOpen, GraduationCap, ShieldAlert } from 'lucide-react'
 import { clearSession, getUser } from '../../lib/api'
 
-const links=[['/admin','Dashboard',LayoutDashboard],['/admin/users','Users',Users],['/admin/leads','Demo Leads',Inbox],['/admin/payments','Payments',CreditCard],['/admin/catalog','Services & Plans',Boxes],['/admin/pages','Pages / CMS',FileText],['/admin/faqs','FAQs',HelpCircle],['/admin/partners','Partners',Users],['/admin/settings','Site Settings',Settings],['/admin/books','GeM Books',BookOpen],['/admin/courses','Courses & Videos',GraduationCap]]
+const links=[['/admin','Dashboard',LayoutDashboard],['/admin/security','Security Alerts',ShieldAlert],['/admin/users','Users',Users],['/admin/leads','Demo Leads',Inbox],['/admin/payments','Payments',CreditCard],['/admin/catalog','Services & Plans',Boxes],['/admin/pages','Pages / CMS',FileText],['/admin/faqs','FAQs',HelpCircle],['/admin/partners','Partners',Users],['/admin/settings','Site Settings',Settings],['/admin/books','GeM Books',BookOpen],['/admin/courses','Courses & Videos',GraduationCap]]
 
 function AdminNav({ onNavigate }) {
   return <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
@@ -46,3 +46,21 @@ export default function AdminShell({children}){
   </div>
 }
 export function BackToSite(){return <NavLink to="/" className="inline-flex items-center gap-2 text-sm text-ink/60 hover:text-ink"><ArrowLeft size={15}/>Back to website</NavLink>}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

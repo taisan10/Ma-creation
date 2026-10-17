@@ -4,9 +4,9 @@ WORKDIR /app
 
 # Copy only manifest files first so `npm ci` is cached by Docker unless
 # dependencies actually changed -- rebuilds after a plain code edit are fast.
+RUN apk add --no-cache ffmpeg  python3 make g++
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
-RUN apk add --no-cache ffmpeg 
 
 COPY . .
 

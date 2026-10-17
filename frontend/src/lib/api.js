@@ -2,6 +2,39 @@
 const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '')
 const RETRYABLE_STATUS = new Set([408, 429, 502, 503, 504])
 
+// Ek single refresh promise taaki agar 3 requests ek sath 401 dein toh 3 baar refresh call na ho
+let refreshPromise = null
+
+async function tryRefreshToken() {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const res = await fetch(`${API_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-refresh-token': '1' // 🛡️ CSRF guard ke liye required
+          },
+          credentials: 'include' // 🍪 HttpOnly cookie bhejne ke liye
+        })
+        if (!res.ok) return null
+        const data = await res.json()
+        if (data?.token) {
+          localStorage.setItem('mac_token', data.token)
+          if (data.user) localStorage.setItem('mac_user', JSON.stringify(data.user))
+          return data.token
+        }
+        return null
+      } catch {
+        return null
+      } finally {
+        refreshPromise = null
+      }
+    })()
+  }
+  return refreshPromise
+}
+
 export async function api(path, options = {}) {
   const token = localStorage.getItem('mac_token')
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData
@@ -16,7 +49,7 @@ export async function api(path, options = {}) {
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     let response
     try {
-      response = await fetch(`${API_URL}${path}`, { ...requestOptions, headers })
+      response = await fetch(`${API_URL}${path}`, { ...requestOptions, headers, credentials: 'include' })
     } catch (networkErr) {
       if (attempt < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 350))
@@ -35,10 +68,34 @@ export async function api(path, options = {}) {
 
     if (response.ok) return data && typeof data === 'object' ? data : {}
 
+    // 401 Token Expiry Handling
     if (response.status === 401) {
-      clearSession()
-      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-        window.location.href = '/login'
+      // Agar request khud login/register/refresh ki thi, toh infinite loop se bachein
+      if (path.startsWith('/auth/login') || path.startsWith('/auth/register') || path.startsWith('/auth/refresh')) {
+        clearSession()
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+          window.location.href = '/login'
+        }
+      } else {
+        // Naya access token lene ki koshish karein
+        const newToken = await tryRefreshToken()
+        if (newToken) {
+          // Token mil gaya! Request ko naye token ke sath 1 baar retry karein
+          headers.Authorization = `Bearer ${newToken}`
+          const retryRes = await fetch(`${API_URL}${path}`, { ...requestOptions, headers, credentials: 'include' })
+          let retryData = {}
+          try {
+            const retryText = await retryRes.text()
+            retryData = retryText ? JSON.parse(retryText) : {}
+          } catch {}
+          if (retryRes.ok) return retryData && typeof retryData === 'object' ? retryData : {}
+        }
+
+        // Agar refresh fail hua toh hi logout karein
+        clearSession()
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+          window.location.href = '/login'
+        }
       }
     }
 

@@ -97,3 +97,70 @@ export async function detectIncognito() {
     return true // IndexedDB unavailable -- strong private-mode signal (older Firefox)
   }
 }
+
+// --- Signal 5: Window Blur & Tab Switch (OBS / Desktop Recorder Focus Loss) ---
+export function watchWindowFocusAndBlur(onBlurDetected) {
+  function handleBlur() {
+    onBlurDetected('blur_suspected')
+  }
+
+  function handleVisibilityChange() {
+    if (document.hidden) {
+      onBlurDetected('blur_suspected')
+    }
+  }
+
+  window.addEventListener('blur', handleBlur)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+
+  return () => {
+    window.removeEventListener('blur', handleBlur)
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }
+}
+
+// --- Signal 6: Screenshot & Screen Capture Keyboard Shortcuts ---
+export function watchScreenshotShortcuts(onDetected) {
+  function handleKeyDown(e) {
+    // 1. PrintScreen key
+    if (e.key === 'PrintScreen' || e.keyCode === 44) {
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText('').catch(() => {})
+      }
+      onDetected('screenshot_suspected')
+      return
+    }
+
+    // 2. Windows Snipping / Mac Screenshot / DevTools combinations
+    const isWindowsSnipping = (e.key === 's' || e.key === 'S') && e.shiftKey && (e.metaKey || e.ctrlKey)
+    const isMacScreenshot = (e.key === '3' || e.key === '4' || e.key === '5') && e.metaKey && e.shiftKey
+    const isDevToolsCombo = (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c') && e.ctrlKey && e.shiftKey
+    const isF12 = e.key === 'F12'
+
+    if (isWindowsSnipping || isMacScreenshot || isDevToolsCombo || isF12) {
+      e.preventDefault()
+      e.stopPropagation()
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText('').catch(() => {})
+      }
+      onDetected('screenshot_suspected')
+    }
+  }
+
+  function handleKeyUp(e) {
+    if (e.key === 'PrintScreen' || e.keyCode === 44) {
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText('').catch(() => {})
+      }
+      onDetected('screenshot_suspected')
+    }
+  }
+
+  window.addEventListener('keydown', handleKeyDown, true)
+  window.addEventListener('keyup', handleKeyUp, true)
+
+  return () => {
+    window.removeEventListener('keydown', handleKeyDown, true)
+    window.removeEventListener('keyup', handleKeyUp, true)
+  }
+}

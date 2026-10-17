@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHand
 import { requestPlaybackToken, reportWatchEvent } from '../../lib/videoApi'
 import { getUser } from '../../lib/api'
 import WatchLimitModal from './WatchLimitModal'
+import VideoWatermark from './VideoWatermark'
+import Hls from 'hls.js'
 
 // How many seconds of GENUINE playback must happen before we count this as
 // a real "watch" -- avoids counting an accidental click or a page that
@@ -22,15 +24,47 @@ const ProtectedVideoPlayer = forwardRef(function ProtectedVideoPlayer({ videoId,
   const countedRef = useRef(false) // guards against double-counting client-side too
   const startTimeRef = useRef(null) // tracks when playback started for duration calc
   const heartbeatRef = useRef(null)
+  const hlsRef = useRef(null)
 
-  const [state, setState] = useState('loading') // loading | ready | blocked | error | recording_blocked
+  const [state, setState] = useState('loading') // loading | ready | blocked | error | recording_blocked | locked_pending_admin
   const [playback, setPlayback] = useState(null) // { url, watchCount, maxWatchCount }
   const [errorMessage, setErrorMessage] = useState('')
+  const [isBlurred, setIsBlurred] = useState(false)
+
+  // Auto-pause and blackout when window loses focus (OBS / Game Bar background capture defense)
+  useEffect(() => {
+    function handleBlur() {
+      setIsBlurred(true)
+      if (videoRef.current && !videoRef.current.paused) {
+        videoRef.current.pause()
+      }
+    }
+    function handleFocus() {
+      setIsBlurred(false)
+    }
+    function handleVisibility() {
+      if (document.hidden) {
+        handleBlur()
+      } else {
+        handleFocus()
+      }
+    }
+
+    window.addEventListener('blur', handleBlur)
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      window.removeEventListener('blur', handleBlur)
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [])
 
   const loadToken = useCallback(async () => {
     setState('loading')
     countedRef.current = false
-     startTimeRef.current = null
+    startTimeRef.current = null
     heartbeatRef.current = null
     try {
       const data = await requestPlaybackToken(videoId)
@@ -40,6 +74,9 @@ const ProtectedVideoPlayer = forwardRef(function ProtectedVideoPlayer({ videoId,
     } catch (e) {
       if (e.code === 'WATCH_LIMIT_REACHED') {
         setState('blocked')
+      } else if (e.code === 'PLAYBACK_LOCKED_PENDING_ADMIN' || e.code === 'PLAYBACK_LOCKED') {
+        setErrorMessage(e.message)
+        setState('locked_pending_admin')
       } else {
         setErrorMessage(e.message || 'Could not load this video.')
         setState('error')
@@ -51,6 +88,54 @@ const ProtectedVideoPlayer = forwardRef(function ProtectedVideoPlayer({ videoId,
     if (!getUser()) return
     loadToken()
   }, [loadToken])
+
+  // Attach video stream: Supports encrypted HLS (.m3u8) via Hls.js with native MP4 fallback
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video || !playback?.url) return
+
+    const url = playback.url
+    const isHls = url.includes('.m3u8')
+
+    if (isHls && Hls.isSupported()) {
+      const hls = new Hls({
+        xhrSetup: (xhr) => {
+          const token = localStorage.getItem('mac_token')
+          if (token) {
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+          }
+        }
+      })
+      hls.loadSource(url)
+      hls.attachMedia(video)
+      hlsRef.current = hls
+
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              hls.startLoad()
+              break
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              hls.recoverMediaError()
+              break
+            default:
+              hls.destroy()
+              break
+          }
+        }
+      })
+    } else {
+      video.src = url
+    }
+
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy()
+        hlsRef.current = null
+      }
+    }
+  }, [playback?.url])
 
   // Fires on every native <video> timeupdate event -- we only act once
   // currentTime crosses COUNT_AFTER_SECONDS, and only once per session
@@ -113,9 +198,10 @@ const ProtectedVideoPlayer = forwardRef(function ProtectedVideoPlayer({ videoId,
     triggerSuspicious(reason) {
       const token = sessionRef.current?.token
       if (token) reportWatchEvent(videoId, token, reason).catch(() => {})
-      // Blanking the <video> src BEFORE changing state is what actually
-      // "unmounts" playback immediately, rather than waiting for React's
-      // next render pass to remove the element.
+      if (hlsRef.current) {
+        hlsRef.current.destroy()
+        hlsRef.current = null
+      }
       if (videoRef.current) {
         videoRef.current.pause()
         videoRef.current.removeAttribute('src')
@@ -141,13 +227,28 @@ const ProtectedVideoPlayer = forwardRef(function ProtectedVideoPlayer({ videoId,
     )
   }
 
-  if (state === 'recording_blocked') {
-    // Part 8 renders its own RecordingDetectedModal alongside this state --
-    // placeholder message here so the player is still safely unmounted even
-    // before Part 8 adds the richer popup.
+  if (state === 'recording_blocked' || state === 'locked_pending_admin') {
     return (
-      <div className="card py-16 text-center text-sm text-rust">
-        Playback stopped due to suspicious activity. Please stop screen recording before watching.
+      <div className="relative w-full rounded-lg overflow-hidden bg-black aspect-video flex flex-col items-center justify-center p-6 text-center text-white border border-red-900/50 shadow-2xl">
+        <div className="w-14 h-14 rounded-full bg-red-950/80 border border-red-600/40 flex items-center justify-center mb-4 text-red-500 shadow-lg animate-pulse">
+          <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-red-400 mb-2">⚠️ Security Lockdown: Playback Suspended</h3>
+        <p className="text-xs sm:text-sm text-gray-300 max-w-lg mb-4 leading-relaxed">
+          Screen recording, window capture, or screenshot shortcut activity was detected. To protect copyrighted course content, your playback has been locked and a security incident report has been submitted to the Admin.
+        </p>
+        <div className="bg-red-950/40 border border-red-800/40 rounded px-4 py-2 text-xs text-red-300 mb-5">
+          Your watch timestamp is safely preserved. Once the Administrator reviews and approves your session, you will resume from this exact position.
+        </div>
+        <button
+          type="button"
+          onClick={loadToken}
+          className="px-5 py-2 text-xs font-medium rounded-md bg-red-600/80 hover:bg-red-600 text-white transition shadow"
+        >
+          Check Admin Approval & Refresh Status
+        </button>
       </div>
     )
   }
@@ -163,21 +264,34 @@ const ProtectedVideoPlayer = forwardRef(function ProtectedVideoPlayer({ videoId,
 
   return (
     <div>
-      <video
-        ref={videoRef}
-        key={playback.url} // forces a fresh <video> element per new token, never reuses a stale src
-        src={playback.url}
-        controls
-        controlsList="nodownload noplaybackrate"
-        disablePictureInPicture
-        onContextMenu={e => e.preventDefault()} // deters casual right-click "Save video as"
-        onTimeUpdate={handleTimeUpdate}
-        onEnded={handleEnded}
-        className="w-full rounded-lg bg-black aspect-video"
-      />
+      <div className="relative w-full rounded-lg overflow-hidden bg-black aspect-video">
+        <video
+          ref={videoRef}
+          controls
+          controlsList="nodownload noplaybackrate"
+          disablePictureInPicture
+          onContextMenu={e => e.preventDefault()} // deters casual right-click "Save video as"
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={handleEnded}
+          className="w-full h-full object-contain"
+        />
+        <VideoWatermark user={getUser()} />
+
+        {/* 100% PURE BLACK OVERLAY ON WINDOW BLUR / OBS CAPTURE TRAP */}
+        {isBlurred && (
+          <div className="absolute inset-0 bg-black flex flex-col items-center justify-center p-6 text-center z-30 select-none">
+            <div className="w-12 h-12 rounded-full bg-neutral-900 border border-neutral-700 flex items-center justify-center mb-3 text-neutral-400">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-neutral-200">Window Inactive — Playback Blacked Out</p>
+            <p className="text-xs text-neutral-500 mt-1">Click back onto this tab to continue watching.</p>
+          </div>
+        )}
+      </div>
       <p className="mt-2 text-xs text-ink/40">
         {title} — {Math.floor(playback.remainingSeconds / 60)}m {playback.remainingSeconds % 60}s remaining
-
       </p>
     </div>
   )

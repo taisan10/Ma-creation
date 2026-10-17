@@ -6,7 +6,12 @@ import { useLocation } from 'react-router-dom'
 export default function ScrollToHash() {
   const { hash, pathname } = useLocation()
 
-  useEffect(() => {
+    useEffect(() => {
+    // Kisi bhi page transition par scroll lock release karein
+    document.body.style.overflow = ''
+    document.body.style.position = ''
+    document.documentElement.style.overflow = ''
+
     if (hash) {
       const el = document.getElementById(hash.replace('#', ''))
       if (el) {
@@ -21,6 +26,7 @@ export default function ScrollToHash() {
     }
     window.scrollTo(0, 0)
   }, [hash, pathname])
+
 
   return null
 }

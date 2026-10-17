@@ -18,6 +18,15 @@ async function loadRazorpay() {
 
 function money(value) { return `₹${Number(value || 0).toLocaleString('en-IN')}` }
 
+function restoreScroll() {
+  document.body.style.overflow = ''
+  document.body.style.position = ''
+  document.documentElement.style.overflow = ''
+  // Razorpay ke bache hue backdrop / container frames ko clean karein
+  document.querySelectorAll('.razorpay-container, iframe[src*="razorpay"]').forEach(el => el.remove())
+}
+
+
 export default function PurchaseButton({ planId, planName, alreadyPurchased = false, purchasedOn = null }) {
   const { theme } = useTheme()
   const navigate = useNavigate()
@@ -64,39 +73,44 @@ export default function PurchaseButton({ planId, planName, alreadyPurchased = fa
       order_id: orderData.order.id,
       prefill: { name: contact.name, email: contact.email, contact: contact.phone },
       theme: { color: theme.primary },
-      handler: async response => {
+          handler: async response => {
+        restoreScroll() // 👈 1. Scroll unlock karein
         try {
           const verified = await api('/payments/verify', { method: 'POST', body: JSON.stringify(response) })
           setPurchase(verified.payment)
           window.dispatchEvent(new Event('courses-updated'))
           if (getUser()) {
-            // Logged-in buyer: this is the moment the plan's courses become
-            // unlocked (Course.plan now matches a 'paid' Payment for them --
-            // see requireCourseEntitlement in Part 4). Send them straight to
-            // the page that lists everything they can now watch.
             setMessage('Payment verified successfully. Redirecting you to your unlocked courses…')
-            setTimeout(() => navigate('/courses'), 1500)
+            setTimeout(() => {
+              restoreScroll()
+              navigate('/courses')
+            }, 1500)
           } else {
-            // Guest checkout: there's no account yet for courses to attach
-            // to, so we can't send them to /courses (it requires login).
             setMessage('Payment verified successfully. Create an account or log in to unlock your courses.')
           }
         } catch (e) {
           setMessage(e.message)
         } finally {
+          restoreScroll()
           setBusy(false)
         }
       },
       modal: {
         ondismiss: () => {
+          restoreScroll() // 👈 2. User cancel kare tab bhi scroll unlock karein
           api('/payments/failed', { method: 'POST', body: JSON.stringify({ razorpay_order_id: orderData.order.id }) }).catch(() => {})
           setMessage('Checkout was closed before payment completed. Our team can follow up with you.')
           setBusy(false)
         }
       }
     })
-    rzp.on('payment.failed', () => { api('/payments/failed', { method: 'POST', body: JSON.stringify({ razorpay_order_id: orderData.order.id }) }).catch(() => {}); setBusy(false) })
+    rzp.on('payment.failed', () => { 
+      restoreScroll() // 👈 3. Payment fail hone par bhi unlock karein
+      api('/payments/failed', { method: 'POST', body: JSON.stringify({ razorpay_order_id: orderData.order.id }) }).catch(() => {}); 
+      setBusy(false) 
+    })
     rzp.open()
+
   }
 
   function handleBuyClick() {

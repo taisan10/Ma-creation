@@ -26,10 +26,12 @@ app.use(helmet())
 app.use(cors({ origin: env.clientUrl, credentials: true }))
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 600 : 100000,
+  // max: process.env.NODE_ENV === 'production' ? 600 : 100000,
+  max: process.env.LOAD_TEST_MODE === 'true' ? 200000 : (process.env.NODE_ENV === 'production' ? 1200 : 100000),  // production production mai upload se pahle muje ye sb add btaye ki remove krna h ok only information remove nahi krna ok 
   standardHeaders: 'draft-8',
   legacyHeaders: false,
-  skip: req => process.env.NODE_ENV !== 'production' || req.path === '/api/public/events',
+  // skip: req => process.env.NODE_ENV !== 'production' || req.path === '/api/public/events',
+  skip: req => process.env.NODE_ENV !== 'production' || process.env.LOAD_TEST_MODE === 'true' || req.path === '/api/public/events',  // production production mai upload se pahle muje ye sb add btaye ki remove krna h ok only information remove nahi krna ok 
 }))
 
 app.use(cookieParser())

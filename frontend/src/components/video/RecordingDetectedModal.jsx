@@ -1,11 +1,15 @@
 const MESSAGES = {
   recording_suspected: {
-    title: 'Screen recording detected',
-    body: 'We detected activity consistent with screen recording software. Please close or disable your screen recorder, then reload this page to continue watching.'
+    title: 'Screen Recording Detected',
+    body: 'We detected screen recording activity. Your playback has been locked and an alert has been submitted to Admin. Your exact watch position is safely preserved.'
+  },
+  screenshot_suspected: {
+    title: 'Screenshot / Screen Capture Shortcut Detected',
+    body: 'We detected a screenshot or screen capture attempt. Playback has been locked and an incident report has been submitted to the Admin.'
   },
   incognito_suspected: {
-    title: 'Private / Incognito browsing detected',
-    body: 'This video can\'t be played in a private/incognito browser window. Please reopen this page in a normal browser window to continue watching.'
+    title: 'Private / Incognito Browsing Detected',
+    body: 'This video cannot be played in a private/incognito browser window. Please reopen this page in a normal browser window to continue watching.'
   }
 }
 

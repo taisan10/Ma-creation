@@ -7,9 +7,11 @@ import rateLimit from 'express-rate-limit'
  */
 export const loginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 4, // Max 4 attempts per IP per 15 minutes
+    max: process.env.LOAD_TEST_MODE === 'true' ? 100000 : 10,  // production production mai upload se pahle muje ye sb add btaye ki remove krna h ok only information remove nahi krna ok 
+  // max: 4, // Max 4 attempts per IP per 15 minutes
   standardHeaders: true, // Return standard RateLimit headers
   legacyHeaders: false,
+   skip: () => process.env.LOAD_TEST_MODE === 'true',   // production production mai upload se pahle muje ye sb add btaye ki remove krna h ok only information remove nahi krna ok 
   message: {
     success: false,
     error: {

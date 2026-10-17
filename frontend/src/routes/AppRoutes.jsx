@@ -23,6 +23,7 @@ import AdminPartners from '../pages/admin/AdminPartners'
 import AdminSettings from '../pages/admin/AdminSettings'
 import AdminBooks from '../pages/admin/AdminBooks'
 import AdminCourses from '../pages/admin/AdminCourses'
+import AdminSecurity from '../pages/admin/AdminSecurity'
 import { getUser } from '../lib/api'
 
 function AdminRoute({ children }) {
@@ -50,6 +51,7 @@ export default function AppRoutes() {
       <Route path="/courses/:courseId/watch/:videoId" element={<WatchVideo />} />
       <Route path="/theme" element={<Theme />} />
       <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+      <Route path="/admin/security" element={<AdminRoute><AdminSecurity /></AdminRoute>} />
       <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
       <Route path="/admin/leads" element={<AdminRoute><AdminLeads /></AdminRoute>} />
       <Route path="/admin/payments" element={<AdminRoute><AdminPayments /></AdminRoute>} />

@@ -1,0 +1,11 @@
+{
+  "description": "Dependencies needed in your Express + Mongoose project to support OWASP Level 2+ Auth",
+  "dependenciesToInstall": {
+    "argon2": "^0.41.1",
+    "cookie-parser": "^1.4.7",
+    "express-rate-limit": "^7.5.0",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^3.23.8"
+  },
+  "installCommand": "npm install argon2 cookie-parser express-rate-limit jsonwebtoken zod"
+}
