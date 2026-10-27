@@ -4,22 +4,30 @@ import Course from '../models/Course.js'
 import Video from '../models/Video.js'
 import Payment from '../models/Payment.js'
 import { minioClient, VIDEO_BUCKET } from '../config/minio.js'
-import { HlsService } from './hls.service.js'
-import ffmpeg from 'fluent-ffmpeg'
 
-function detectVideoDuration(bucket, objectKey) {
-  return new Promise(resolve => {
-    minioClient
-      .getObject(bucket, objectKey)
-      .then(stream => {
-        ffmpeg(stream).ffprobe((err, data) => {
-          if (err) return resolve(0)
-          const duration = data?.format?.duration
-          resolve(duration ? Math.ceil(duration) : 0)
-        })
-      })
-      .catch(() => resolve(0))
-  })
+// 🛡️ Helper: Safely purge MinIO video artifacts (original + HLS directory)
+async function deleteMinioVideoAssets(video) {
+  if (video.minioObjectKey && !video.minioObjectKey.startsWith('pending/')) {
+    await minioClient.removeObject(VIDEO_BUCKET, video.minioObjectKey).catch(err => {
+      console.error(`[minio] failed to remove object ${video.minioObjectKey}:`, err.message)
+    })
+  }
+
+  const remoteDir = video.hlsDirectory || (video.course ? `courses/${video.course}/${video._id}/hls` : null)
+  if (remoteDir) {
+    try {
+      const stream = minioClient.listObjects(VIDEO_BUCKET, remoteDir, true)
+      const toDelete = []
+      for await (const obj of stream) {
+        if (obj?.name) toDelete.push(obj.name)
+      }
+      if (toDelete.length > 0) {
+        await minioClient.removeObjects(VIDEO_BUCKET, toDelete)
+      }
+    } catch (err) {
+      console.error(`[minio] failed to remove HLS objects for ${video._id}:`, err.message)
+    }
+  }
 }
 
 export class CourseService {
@@ -42,11 +50,7 @@ export class CourseService {
 
     const videos = await Video.find({ course: { $in: courseIds } })
     for (const video of videos) {
-      if (video.minioObjectKey && !video.minioObjectKey.startsWith('pending/')) {
-        await minioClient.removeObject(VIDEO_BUCKET, video.minioObjectKey).catch(err => {
-          console.error(`[minio] failed to remove object ${video.minioObjectKey}:`, err.message)
-        })
-      }
+      await deleteMinioVideoAssets(video)
     }
 
     await Video.deleteMany({ course: { $in: courseIds } })
@@ -73,11 +77,7 @@ export class CourseService {
 
     const videos = await Video.find({ course: course._id })
     for (const video of videos) {
-      if (video.minioObjectKey && !video.minioObjectKey.startsWith('pending/')) {
-        await minioClient.removeObject(VIDEO_BUCKET, video.minioObjectKey).catch(err => {
-          console.error(`[minio] failed to remove object ${video.minioObjectKey}:`, err.message)
-        })
-      }
+      await deleteMinioVideoAssets(video)
     }
     await Video.deleteMany({ course: course._id })
     await course.deleteOne()
@@ -86,6 +86,10 @@ export class CourseService {
   // Video operations
   static async createVideoMeta({ course, title, description, order, durationSeconds, maxWatchMultiplier }) {
     if (!course || !title) throw new AppError('course and title are required', 400, 'BAD_REQUEST')
+
+    const courseExists = await Course.exists({ _id: course })
+    if (!courseExists) throw new AppError('Course does not exist', 404, 'COURSE_NOT_FOUND')
+
     return await Video.create({
       course,
       title,
@@ -93,7 +97,7 @@ export class CourseService {
       order,
       durationSeconds,
       maxWatchMultiplier,
-      minioObjectKey: `pending/${Date.now()}`,
+      status: 'PENDING',
       active: false,
     })
   }
@@ -103,65 +107,39 @@ export class CourseService {
     return await Video.find(filter).sort({ order: 1, createdAt: 1 })
   }
 
-  static async finalizeVideoUpload(videoId, uploadedVideo) {
-    const video = await Video.findById(videoId)
-    if (!video) throw new AppError('Video not found', 404, 'NOT_FOUND')
-
-    const previousKey = video.minioObjectKey
-    video.minioObjectKey = uploadedVideo.objectKey
-    video.mimeType = uploadedVideo.mimeType
-    video.active = true
-
-    if (!video.durationSeconds || video.durationSeconds === 0) {
-      try {
-        const duration = await detectVideoDuration(VIDEO_BUCKET, video.minioObjectKey)
-        if (duration > 0) video.durationSeconds = duration
-      } catch (err) {
-        console.error(`[video] Could not auto-detect duration for ${video._id}:`, err.message)
-      }
-    }
-
-    await video.save()
-
-    // Trigger background HLS AES-128 transcoding
-    HlsService.transcodeVideo(video._id).catch(err => {
-      console.error(`[HLS] Background transcode failed for video ${video._id}:`, err.message)
-    })
-
-    if (previousKey && !previousKey.startsWith('pending/')) {
-      minioClient.removeObject(VIDEO_BUCKET, previousKey).catch(err => {
-        console.error(`[minio] failed to remove superseded object ${previousKey}:`, err.message)
-      })
-    }
-
-    return video
-  }
-
   static async deleteVideo(videoId) {
     const video = await Video.findById(videoId)
     if (!video) throw new AppError('Video not found', 404, 'NOT_FOUND')
 
-    if (video.minioObjectKey && !video.minioObjectKey.startsWith('pending/')) {
-      await minioClient.removeObject(VIDEO_BUCKET, video.minioObjectKey).catch(err => {
-        console.error(`[minio] failed to remove object ${video.minioObjectKey}:`, err.message)
-      })
-    }
-
-    if (video.hlsDirectory) {
-      try {
-        const stream = minioClient.listObjects(VIDEO_BUCKET, video.hlsDirectory, true)
-        const toDelete = []
-        for await (const obj of stream) {
-          if (obj?.name) toDelete.push(obj.name)
+    // Permanently delete transcode job from BullMQ & Redis
+    try {
+      const { videoTranscodeQueue } = await import('../queues/video.queue.js')
+      const targetJobId = `transcode-${videoId}`
+      const job = await videoTranscodeQueue.getJob(targetJobId)
+      if (job) {
+        try {
+          await job.remove()
+        } catch {
+          // If locked by active worker, force clean all Redis keys directly
+          const client = await videoTranscodeQueue.client
+          await client.del(
+            `bull:video-transcode-queue:${targetJobId}`,
+            `bull:video-transcode-queue:${targetJobId}:lock`
+          )
+          await client.lrem('bull:video-transcode-queue:active', 0, targetJobId)
+          await client.lrem('bull:video-transcode-queue:wait', 0, targetJobId)
         }
-        if (toDelete.length > 0) {
-          await minioClient.removeObjects(VIDEO_BUCKET, toDelete)
-        }
-      } catch (err) {
-        console.error(`[minio] failed to remove HLS objects for ${video._id}:`, err.message)
       }
-    }
+    } catch {}
 
+    // Clean up local temp files on NVMe storage if still present
+    try {
+      const fs = (await import('fs')).default
+      const tempDir = `/tmp/uploads/${videoId}`
+      if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true })
+    } catch {}
+
+    await deleteMinioVideoAssets(video)
     await video.deleteOne()
   }
 
@@ -199,8 +177,14 @@ export class CourseService {
   }
 
   static async getCourseVideos(courseId) {
-    return await Video.find({ course: courseId, active: true })
-      .select('title description order durationSeconds thumbnailUrl maxWatchMultiplier')
+    // 🛡️ Auto-heal: Ensure all transcoded READY videos are marked active: true
+    await Video.updateMany(
+      { course: courseId, status: 'READY', active: false },
+      { $set: { active: true } }
+    )
+
+    return await Video.find({ course: courseId, status: 'READY', active: true })
+      .select('title description order durationSeconds thumbnailUrl maxWatchMultiplier isHlsReady')
       .sort({ order: 1, createdAt: 1 })
   }
 }

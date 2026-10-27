@@ -11,7 +11,7 @@ export const loginRateLimiter = rateLimit({
   // max: 4, // Max 4 attempts per IP per 15 minutes
   standardHeaders: true, // Return standard RateLimit headers
   legacyHeaders: false,
-   skip: () => process.env.LOAD_TEST_MODE === 'true',   // production production mai upload se pahle muje ye sb add btaye ki remove krna h ok only information remove nahi krna ok 
+   skip: () => process.env.NODE_ENV !== 'production' || process.env.LOAD_TEST_MODE === 'true',
   message: {
     success: false,
     error: {

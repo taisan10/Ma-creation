@@ -8,7 +8,7 @@ import User from '../models/User.js'
 export async function authenticate(req, res, next) {
   const rawToken = req.headers.authorization?.startsWith('Bearer ')
     ? req.headers.authorization.slice(7)
-    : req.query?.token
+    : null
 
   if (!rawToken) {
     return next(new AppError('Authentication required', 401, 'UNAUTHORIZED'))

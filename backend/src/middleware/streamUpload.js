@@ -1,10 +1,12 @@
+
 import Busboy from 'busboy'
 import { randomUUID } from 'crypto'
 import path from 'path'
 import { minioClient, VIDEO_BUCKET } from '../config/minio.js'
 import { AppError } from '../utils/AppError.js'
 
-const ALLOWED_MIME_TYPES = ['video/mp4', 'video/webm', 'video/quicktime']
+const ALLOWED_MIME_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska', 'video/matroska', 'video/mkv']
+const ALLOWED_EXTENSIONS = ['.mp4', '.webm', '.mov', '.mkv']
 const MAX_VIDEO_BYTES = 5 * 1024 * 1024 * 1024 // 5GB safety ceiling, raise if needed
 
 /**
@@ -47,16 +49,17 @@ export function streamVideoUpload(req, res, next) {
     }
 
     const { mimeType, filename } = info
-    if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
+    const ext = path.extname(filename || '').toLowerCase()
+    const isAllowed = ALLOWED_EXTENSIONS.includes(ext) && ALLOWED_MIME_TYPES.includes(mimeType?.toLowerCase())
+    if (!isAllowed) {
       fileStream.resume()
       uploadPromise = Promise.reject(
-        new AppError(`Unsupported video type "${mimeType}". Allowed: ${ALLOWED_MIME_TYPES.join(', ')}`, 400, 'BAD_REQUEST')
+        new AppError(`Invalid file format. Only video files (.mp4, .webm, .mov, .mkv) with matching video MIME types are allowed.`, 400, 'BAD_REQUEST')
       )
       return
     }
 
     fileFieldSeen = true
-    const ext = path.extname(filename || '') || '.mp4'
     // Object key format: courses/videos/<videoId>/<random-uuid>.<ext>
     // Using a fresh UUID (not the original filename) avoids collisions and
     // avoids leaking the original filename into the storage path.

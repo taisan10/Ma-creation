@@ -5,6 +5,7 @@ export const env = {
   clientUrl: process.env.CLIENT_URL || "http://localhost:5173",
   mongoUri: process.env.MONGODB_URI,
   jwtSecret: process.env.JWT_SECRET,
+  videoDrmSecret: process.env.VIDEO_DRM_SECRET || process.env.JWT_SECRET,
   razorpayKeyId: process.env.RAZORPAY_KEY_ID,
   razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET,
   razorpayWebhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET,

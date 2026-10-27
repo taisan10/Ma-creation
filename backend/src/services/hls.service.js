@@ -8,24 +8,30 @@ import Video from '../models/Video.js'
 
 function getFfmpegBinary() {
   if (process.env.FFMPEG_PATH) return process.env.FFMPEG_PATH
-  const wingetBase = 'C:\\Users\\Asus\\AppData\\Local\\Microsoft\\WinGet\\Packages'
-  try {
-    if (fs.existsSync(wingetBase)) {
-      const dirs = fs.readdirSync(wingetBase)
-      const ffmpegDir = dirs.find(d => d.toLowerCase().includes('gyan.ffmpeg'))
-      if (ffmpegDir) {
-        const fullDir = path.join(wingetBase, ffmpegDir)
-        const subdirs = fs.readdirSync(fullDir)
-        const buildDir = subdirs.find(d => d.toLowerCase().includes('build'))
-        if (buildDir) {
-          const binPath = path.join(fullDir, buildDir, 'bin', 'ffmpeg.exe')
-          if (fs.existsSync(binPath)) return binPath
+
+  // Windows: Check WinGet packages dynamically via LOCALAPPDATA
+  if (process.platform === 'win32' && process.env.LOCALAPPDATA) {
+    const wingetBase = path.join(process.env.LOCALAPPDATA, 'Microsoft', 'WinGet', 'Packages')
+    try {
+      if (fs.existsSync(wingetBase)) {
+        const dirs = fs.readdirSync(wingetBase)
+        const ffmpegDir = dirs.find(d => d.toLowerCase().includes('gyan.ffmpeg'))
+        if (ffmpegDir) {
+          const fullDir = path.join(wingetBase, ffmpegDir)
+          const subdirs = fs.readdirSync(fullDir)
+          const buildDir = subdirs.find(d => d.toLowerCase().includes('build'))
+          if (buildDir) {
+            const binPath = path.join(fullDir, buildDir, 'bin', 'ffmpeg.exe')
+            if (fs.existsSync(binPath)) return binPath
+          }
         }
       }
+    } catch {
+      // ignore and fallback to system ffmpeg
     }
-  } catch {
-    // ignore
   }
+
+  // Default: System PATH (standard for Linux VPS / Docker / macOS / Windows PATH)
   return 'ffmpeg'
 }
 

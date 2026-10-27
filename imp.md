@@ -190,9 +190,16 @@ Naya sawal — 2 cheezein:
 2. VIDEO_WATCH_MULTIPLIER Docker mein 2 rakhein ya koi aur value? (2 = video duration × 2 total dekh sakta hai)
 Batao — phir main BAAKI 8 pending changes implement kar deta hoon.
 
+<!-- production mai krne se pahle check krna  -->
 
+Rate Limiter (
 
+app.js
+): Development me limit 100,000 req/15min hai, taaki testing ke dauraan aap khud block na hon. (Production me ye 1200 req ho jati hai). Yeh development me rehna hi best hai.
+Anti-Leech Domain Check (
 
+video.service.js
+): Pehle ye sirf production me chalta tha. Agar aap chahte hain ki development me bhi check kare ki key sirf http://localhost:5173 se mangi ja rahi hai ya nahi, toh isse line 92 par active kar sakte hain.
 
 
 

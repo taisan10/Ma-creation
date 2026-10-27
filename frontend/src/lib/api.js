@@ -1,5 +1,14 @@
-// Prefer same-origin /api in Vite + production deployments. Set VITE_API_URL only when the API is hosted separately.
-const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '')
+// Prefer same-origin /api in Vite + production web deployments.
+// In Electron desktop app (file:// protocol), route to VITE_API_URL or local server.
+const getBaseApiUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL
+  if (envUrl && envUrl !== '/api') return envUrl.replace(/\/$/, '')
+  if (typeof window !== 'undefined' && (window.location.protocol === 'file:' || window.electronAPI?.isDesktopApp)) {
+    return 'http://localhost:5000/api'
+  }
+  return (envUrl || '/api').replace(/\/$/, '')
+}
+export const API_URL = getBaseApiUrl()
 const RETRYABLE_STATUS = new Set([408, 429, 502, 503, 504])
 
 // Ek single refresh promise taaki agar 3 requests ek sath 401 dein toh 3 baar refresh call na ho
@@ -119,3 +128,10 @@ export async function api(path, options = {}) {
 export function setSession(data) { localStorage.setItem('mac_token', data.token); localStorage.setItem('mac_user', JSON.stringify(data.user)) }
 export function clearSession() { localStorage.removeItem('mac_token'); localStorage.removeItem('mac_user') }
 export function getUser() { try { return JSON.parse(localStorage.getItem('mac_user') || 'null') } catch { return null } }
+
+export async function logout() {
+  await api('/auth/logout', { method: 'POST', headers: { 'x-refresh-token': '1' } }).catch(() => {})
+  clearSession()
+}
+
+

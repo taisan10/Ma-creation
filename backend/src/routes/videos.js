@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { authenticate } from '../middleware/auth.js'
+import { authenticate, requireAdmin } from '../middleware/auth.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { requireVideoEntitlement } from '../middleware/requireEntitlement.js'
 import * as c from '../controllers/videoController.js'
@@ -25,7 +25,7 @@ router.get('/:videoId/key', requireVideoEntitlement, asyncHandler(c.getVideoKey)
 router.get('/:videoId/hls/manifest.m3u8', requireVideoEntitlement, asyncHandler(c.getHlsManifest))
 router.get('/:videoId/hls/:segment', requireVideoEntitlement, asyncHandler(c.getHlsSegment))
 
-// Transcode video into AES-128 HLS (accessible by admin/entitled)
-router.post('/:videoId/transcode-hls', requireVideoEntitlement, asyncHandler(c.transcodeVideoHls))
+// Transcode video into AES-128 HLS (Admin only)
+router.post('/:videoId/transcode-hls', requireAdmin, asyncHandler(c.transcodeVideoHls))
 
 export default router

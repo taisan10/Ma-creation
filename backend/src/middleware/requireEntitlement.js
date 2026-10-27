@@ -26,8 +26,16 @@ export async function requireCourseEntitlement(req, res, next) {
 
 export async function requireVideoEntitlement(req, res, next) {
   try {
-    const video = await Video.findOne({ _id: req.params.videoId, active: true })
-    if (!video) return next(new AppError('Video not found', 404, 'NOT_FOUND'))
+    let video = await Video.findOne({ _id: req.params.videoId, active: true })
+    if (!video) {
+      // Auto-heal if video is READY but active was false
+      video = await Video.findOneAndUpdate(
+        { _id: req.params.videoId, status: 'READY' },
+        { $set: { active: true } },
+        { new: true }
+      )
+    }
+    if (!video) return next(new AppError('Video not found or still processing', 404, 'NOT_FOUND'))
  
     const course = await Course.findOne({ _id: video.course, active: true })
     if (!course) return next(new AppError('Course not found', 404, 'NOT_FOUND'))

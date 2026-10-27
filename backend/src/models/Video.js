@@ -14,11 +14,40 @@ const schema = new mongoose.Schema(
     durationSeconds: { type: Number, default: 0 },
     thumbnailUrl: { type: String, maxLength: 500 },
 
+     // 🔒 Life-Cycle Status Pipeline
+    status: {
+      type: String,
+      enum: ["PENDING", "UPLOADING",  "QUEUED", "PROCESSING", "READY", "FAILED"],
+      default: "PENDING",
+      index: true,
+    },
+    processingProgress: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
+    errorMessage: {
+      type: String,
+      default: null,
+    },
+    // 🛡️ CRITICAL SECURITY: select: false ensure karta hai ki normal API calls
+    // (jaise course detail, video list) me encryption key kabhi leak na ho!
+    encryptionKeyHex: {
+      type: String,
+      select: false,
+    },
+    encryptionIvHex: {
+      type: String,
+      select: false,
+    },
+
+
     // Path INSIDE the private MinIO bucket, e.g. "courses/<courseId>/<uuid>.mp4".
     // Never expose this raw key to the frontend -- only ever hand out a
     // presigned URL generated from it, on demand, after entitlement +
     // watch-count checks pass (see videoController in Part 5).
-    minioObjectKey: { type: String, required: true, trim: true },
+    minioObjectKey: { type: String, required: false, trim: true },
     fileSizeBytes: { type: Number },
     mimeType: { type: String, default: "video/mp4" },
 
@@ -32,11 +61,17 @@ const schema = new mongoose.Schema(
     hlsDirectory: { type: String, trim: true },
     hlsManifestKey: { type: String, trim: true },
 
+    resolutionsAvailable: {
+      type: [String],
+      default: ["1080p", "720p", "360p"],
+    },
+
     active: { type: Boolean, default: true },
   },
   { timestamps: true },
 );
 
 schema.index({ course: 1, order: 1 });
+// schema.index({ status: 1 });
 
 export default mongoose.model("Video", schema);

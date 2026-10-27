@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react'
  * - Semi-transparent high-contrast drop-shadow ensures legibility on both dark & light scenes.
  * - Prevents anonymous screen recording / leakages.
  */
-export default function VideoWatermark({ user }) {
+export default function VideoWatermark({ user, clientIp }) {
   const [position, setPosition] = useState({ top: '25%', left: '20%' })
   const [currentTime, setCurrentTime] = useState('')
 
@@ -27,8 +27,8 @@ export default function VideoWatermark({ user }) {
   // Randomize watermark position every 7 seconds
   useEffect(() => {
     function moveWatermark() {
-      const top = Math.floor(12 + Math.random() * 68) + '%'
-      const left = Math.floor(8 + Math.random() * 64) + '%'
+      const top = Math.floor(Math.random() * 55) + 20 + '%' 
+         const left = Math.floor(Math.random() * 50) + 20 + '%'
       setPosition({ top, left })
     }
 
@@ -48,12 +48,15 @@ export default function VideoWatermark({ user }) {
     >
       {/* Primary Floating Forensic Watermark */}
       <div
+      id="forensic-watermark"
         style={{ top: position.top, left: position.left }}
         className="absolute transition-all duration-1000 ease-in-out px-3 py-1.5 rounded bg-black/25 backdrop-blur-[1px] border border-white/10"
       >
         <div className="flex flex-col items-start gap-0.5 font-mono text-[11px] sm:text-xs text-white/50 tracking-wider drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
-          <span className="font-semibold">{identifier}</span>
-          <span className="text-[10px] text-white/40">{displayId} • {currentTime}</span>
+          <span className="font-semibold">{identifier} {user?.phone ? `• ${user.phone}` : ''} </span>
+          <span className="text-[10px] text-white/40">{displayId} • {currentTime}
+          {clientIp ? `• IP: ${clientIp}` : ''}
+          </span>
         </div>
       </div>
 

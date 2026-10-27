@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Users, Inbox, CreditCard, Boxes, FileText, HelpCircle, Settings, LogOut, ArrowLeft, Menu, X, BookOpen, GraduationCap, ShieldAlert } from 'lucide-react'
-import { clearSession, getUser } from '../../lib/api'
+import { logout as apiLogout, getUser } from '../../lib/api'
 
 const links=[['/admin','Dashboard',LayoutDashboard],['/admin/security','Security Alerts',ShieldAlert],['/admin/users','Users',Users],['/admin/leads','Demo Leads',Inbox],['/admin/payments','Payments',CreditCard],['/admin/catalog','Services & Plans',Boxes],['/admin/pages','Pages / CMS',FileText],['/admin/faqs','FAQs',HelpCircle],['/admin/partners','Partners',Users],['/admin/settings','Site Settings',Settings],['/admin/books','GeM Books',BookOpen],['/admin/courses','Courses & Videos',GraduationCap]]
 
@@ -15,7 +15,7 @@ export default function AdminShell({children}){
   const nav=useNavigate()
   const user=getUser()
   const [mobileOpen,setMobileOpen]=useState(false)
-  function logout(){clearSession();nav('/login')}
+  async function logout(){await apiLogout();nav('/login')}
   function closeMobile(){setMobileOpen(false)}
 
   return <div className="min-h-screen bg-paper2 flex">

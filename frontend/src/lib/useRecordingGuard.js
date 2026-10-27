@@ -22,10 +22,13 @@ export function useRecordingGuard(onDetected, { enabled = true } = {}) {
       onDetected(reason)
     }
 
-    // Signal 1: Incognito check
-    detectIncognito().then(isIncognito => {
-      if (isIncognito) fire('incognito_suspected')
-    })
+    // Signal 1: Incognito check (Browser only; Electron desktop app has no incognito mode)
+    const isDesktop = typeof window !== 'undefined' && Boolean(window.electronAPI?.isDesktopApp)
+    if (!isDesktop) {
+      detectIncognito().then(isIncognito => {
+        if (isIncognito) fire('incognito_suspected')
+      })
+    }
 
     // Signal 2: Browser getDisplayMedia hook
     const unhookDisplayMedia = watchGetDisplayMedia(reason => fire(reason))

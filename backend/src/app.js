@@ -13,7 +13,7 @@ import { publicBooksRouter, adminBooksRouter } from './routes/books.js'
 import adminLmsRoutes from './routes/adminLms.js'
 import courseRoutes from './routes/courses.js'
 import videoRoutes from './routes/videos.js'
-import { errorHandler } from './middleware/error.js'
+import { errorHandler, notFoundHandler } from './middleware/error.js'
 import { webhook } from './controllers/paymentController.js'
 import mongoose from 'mongoose'
 import cookieParser from 'cookie-parser'
@@ -21,8 +21,20 @@ import cookieParser from 'cookie-parser'
 assertProductionEnv()
 
 const app = express()
-
-app.use(helmet())
+app.set('trust proxy', 1)
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    const start = Date.now()
+    res.on("finish", () => {
+      console.log(`[HTTP] ${req.method} ${req.originalUrl} ${res.statusCode} (${Date.now() - start}ms)`)
+    })
+    next()
+  })
+} 
+  
+  
+  
+  app.use(helmet())
 app.use(cors({ origin: env.clientUrl, credentials: true }))
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -66,6 +78,7 @@ app.use('/api/courses', courseRoutes)
 app.use('/api/videos', videoRoutes)
 
 
+app.use(notFoundHandler)
 app.use(errorHandler)
 
 export default app

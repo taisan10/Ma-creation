@@ -197,25 +197,8 @@ export class AdminService {
     return incident
   }
 
-  static async revokePlanFromIncident(adminId, incidentId, adminNotes) {
-    const incident = await SecurityIncident.findById(incidentId).populate('course')
-    if (!incident) throw new AppError('Incident not found', 404, 'NOT_FOUND')
-
-    incident.status = 'plan_revoked'
-    incident.resolvedAt = new Date()
-    incident.resolvedBy = adminId
-    if (adminNotes) incident.adminNotes = adminNotes
-    await incident.save()
-
-    // Revoke payments for this course's plan
-    if (incident.course?.plan) {
-      await Payment.updateMany(
-        { user: incident.user, plan: incident.course.plan, status: 'paid' },
-        { $set: { status: 'refunded' } }
-      )
-    }
-
-    return incident
+  static async revokePlanFromIncident() {
+    throw new AppError('Revoke plan feature is disabled', 400, 'FEATURE_DISABLED')
   }
 
   static async banUserFromIncident(adminId, incidentId, adminNotes) {

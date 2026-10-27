@@ -9,9 +9,9 @@ import User from '../models/User.js'
 import SecurityIncident from '../models/SecurityIncident.js'
 
 export class VideoService {
-  /**
-   * Request a secure, time-bound playback token enforcing max watch limit and lock status
-   */
+
+  //  * Request a secure, time-bound playback token enforcing max watch limit and lock status
+ 
   static async requestPlaybackToken({ video, userId, ip, userAgent }) {
     const user = await User.findById(userId)
     if (user?.playbackLocked) {
@@ -65,6 +65,7 @@ export class VideoService {
       videoDurationSeconds: video.durationSeconds || 0,
       multiplier,
       remainingSeconds,
+      clientIp: ip
     }
   }
 
@@ -72,7 +73,7 @@ export class VideoService {
    * Derive a deterministic, military-grade 16-byte AES-128 key for a video using HMAC-SHA256
    */
   static getVideoKeyBuffer(videoId) {
-    return createHmac('sha256', env.jwtSecret)
+    return createHmac('sha256', env.videoDrmSecret || env.jwtSecret)
       .update(String(videoId))
       .digest()
       .subarray(0, 16)
@@ -81,13 +82,21 @@ export class VideoService {
   /**
    * Secure key delivery: Verifies entitlement and watch quota before serving AES-128 key
    */
-  static async getVideoKey({ video, userId }) {
+  static async getVideoKey({ video, userId, req }) {
     const user = await User.findById(userId)
     if (user?.playbackLocked) {
       throw new AppError('Playback locked by security policy. Admin approval required.', 403, 'PLAYBACK_LOCKED')
     }
 
-    const multiplier = video.maxWatchMultiplier ?? env.videoWatchMultiplier
+    // Anti-leech / Hotlinking Protection (Works dynamically for both Localhost & Production Domain)
+    if (req && env.clientUrl) {
+      const origin = req.headers.origin || req.headers.referer || '';
+      if (origin && !origin.startsWith(env.clientUrl)) {
+        throw new AppError('Key request from unauthorized domain denied', 403, 'UNAUTHORIZED_DOMAIN')
+      }
+    }
+
+    const multiplier = video.maxWatchMultiplier ?? env.videoWatchMultiplier ?? 2;
     const maxAllowedSeconds = (video.durationSeconds || 0) * multiplier
 
     if (maxAllowedSeconds > 0) {
@@ -98,12 +107,19 @@ export class VideoService {
       }
     }
 
+    // 2. Fetch Actual AES-128 key from MongoDB (Explicity selecting hidden key field)
+    const videoWithKey = await Video.findById(video._id).select("+encryptionKeyHex");
+    if(videoWithKey?.encryptionKeyHex){
+      return Buffer.from(videoWithKey.encryptionKeyHex,'hex');
+    }
+
+    // fallback for Legacy videos:
     return this.getVideoKeyBuffer(video._id)
   }
 
-  /**
-   * Handle video player lifecycle events (started, heartbeat, recording/incognito, ended)
-   */
+  
+  //  Handle video player lifecycle events (started, heartbeat, recording/incognito, ended)
+   
   static async reportWatchEvent({ token, type, seconds, userId, videoId }) {
     if (!token || !type) throw new AppError('token and type are required', 400, 'BAD_REQUEST')
 
@@ -129,7 +145,16 @@ export class VideoService {
       return { counted: true }
     }
 
-    if (type === 'recording_suspected' || type === 'screenshot_suspected' || type === 'incognito_suspected' || type === 'blur_suspected') {
+    if (type === 'incognito_suspected') {
+      // Incognito does NOT increment strikes or lock the user account permanently
+      session.consumed = true
+      session.expiresAt = new Date()
+      session.flags.push(type)
+      await session.save()
+      return { flagged: type, locked: false, message: 'Please open in normal window' }
+    }
+
+    if (type === 'recording_suspected' || type === 'screenshot_suspected' || type === 'blur_suspected') {
       // 1. Immediately kill active playback session
       session.consumed = true
       session.expiresAt = new Date()
@@ -168,25 +193,28 @@ export class VideoService {
     }
 
     if (type === 'heartbeat') {
-      const hbSeconds = Math.max(0, Math.floor(Number(seconds) || 0))
+      const hbSeconds = Math.max(0, Math.min(60, Math.floor(Number(seconds) || 0))); // Cap Heartbeat to max 60s
       if (hbSeconds > 0) {
         const updated = await WatchLog.findOneAndUpdate(
           { user: userId, video: videoId },
-          { $inc: { totalWatchedSeconds: hbSeconds } },
+          { $inc: { totalWatchedSeconds: hbSeconds }, $set: {lastWatchedAt: new Date()} },
           { upsert: true, new: true }
         )
         const video = await Video.findById(videoId)
-        const multiplier = video?.maxWatchMultiplier ?? env.videoWatchMultiplier
-        const maxAllowed = (video?.durationSeconds || 0) * multiplier
+        const multiplier = video?.maxWatchMultiplier ?? env.videoWatchMultiplier ?? 2;
+        const maxAllowed = (video?.durationSeconds || 0) * multiplier;
+        const remainingSeconds = Math.max(0, maxAllowed - updated.totalWatchedSeconds);
+
         if (maxAllowed > 0 && updated.totalWatchedSeconds >= maxAllowed) {
-          return { watchLimitReached: true }
+          return { watchLimitReached: true, remainingSeconds: 0, totalWatchedSeconds: updated.totalWatchedSeconds};
         }
+        return { remainingSeconds, totalWatchedSeconds: updated.totalWatchedSeconds };
       }
       return {}
     }
 
     if (type === 'ended') {
-      const endedSeconds = Math.max(0, Math.floor(Number(seconds) || 0))
+      const endedSeconds = Math.max(0, Math.min(60, Math.floor(Number(seconds) || 0)))
       await WatchLog.findOneAndUpdate(
         { user: userId, video: videoId, 'history.0': { $exists: true } },
         {

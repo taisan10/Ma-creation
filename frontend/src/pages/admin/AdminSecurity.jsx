@@ -53,7 +53,7 @@ export default function AdminSecurity() {
               Security Alerts & Recording Incidents
             </h1>
             <p className="mt-1 text-ink/60 text-sm">
-              Review flagged screen recordings, unlock honest users to resume from their saved timestamp, or revoke plans.
+              Review flagged screen recordings, unlock honest users to resume from their saved timestamp, or ban offenders.
             </p>
           </div>
           <button
@@ -72,7 +72,6 @@ export default function AdminSecurity() {
             ['all', 'All Incidents'],
             ['pending_review', '⚠️ Pending Review'],
             ['approved_unlocked', '✅ Approved & Unlocked'],
-            ['plan_revoked', '❌ Plan Revoked'],
             ['user_banned', '🚫 User Banned'],
           ].map(([val, label]) => (
             <button
@@ -174,14 +173,6 @@ export default function AdminSecurity() {
                             >
                               <CheckCircle size={14} />
                               Approve & Unlock
-                            </button>
-                            <button
-                              onClick={() => handleAction('revoke-plan', inc._id, 'Plan revoked')}
-                              disabled={isWorking}
-                              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-1.5 transition shadow-sm"
-                            >
-                              <XCircle size={14} />
-                              Revoke Plan
                             </button>
                             <button
                               onClick={() => handleAction('ban-user', inc._id, 'User banned')}

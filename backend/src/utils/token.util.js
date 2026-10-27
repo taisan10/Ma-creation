@@ -24,7 +24,7 @@ export function parseDurationToMs(durationStr, fallbackMs = 7 * 24 * 60 * 60 * 1
   const match = durationStr.trim().match(/^(\d+)([smhd])$/i)
   if (!match) return fallbackMs
   const val = parseInt(match[1], 10)
-  const unit = match[2]
+  const unit = match[2].toLowerCase()
   switch (unit) {
     case 's': return val * 1000
     case 'm': return val * 60 * 1000

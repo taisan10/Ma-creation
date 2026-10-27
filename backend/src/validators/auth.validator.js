@@ -1,11 +1,12 @@
 import { z } from 'zod'
 
 export const registerSchema = z.object({
-  name: z.string().min(2).max(80),
-  email: z.string().email(),
+  name: z.string().trim().min(2).max(80),
+  email: z.string().trim().email(),
   password: z.string().min(8).max(128),
-  phone: z.string().optional(),
-  company: z.string().max(120).optional(),
+  phone: z.string().trim().min(10, 'Contact number must be at least 10 digits').max(15, 'Contact number cannot exceed 15 digits'),
+  company: z.string().trim().max(120).optional(),
+  interest: z.string().trim().max(100).optional(),
 })
 
 export const loginSchema = z.object({

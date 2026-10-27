@@ -39,12 +39,13 @@ export class AuthService {
 
     // Check account active status
     if (!user.isActive) {
-      throw new Error('Invalid email or password')
+      throw new AppError('Account is deactivated. Please contact support.', 403, 'ACCOUNT_INACTIVE')
     }
 
     // Check account lockout status
     if (user.lockedUntil && user.lockedUntil > new Date()) {
-      throw new Error('Invalid email or password')
+      const waitMinutes = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000)
+      throw new AppError(`Account is temporarily locked due to failed attempts. Please try again in ${waitMinutes} minute(s).`, 423, 'ACCOUNT_LOCKED')
     }
 
     // Verify password with Argon2id
@@ -270,8 +271,9 @@ export class AuthService {
     let user
     try {
       user = await this.validateCredentials(email, password)
-    } catch {
-      throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS')
+    } catch (err) {
+      if (err instanceof AppError) throw err
+      throw new AppError(err.message || 'Invalid email or password', 401, 'INVALID_CREDENTIALS')
     }
 
     // Link guest payments

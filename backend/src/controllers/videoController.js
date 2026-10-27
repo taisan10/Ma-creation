@@ -28,6 +28,7 @@ export async function getVideoKey(req, res) {
   const keyBuffer = await VideoService.getVideoKey({
     video: req.video,
     userId: req.user.sub,
+    req,
   })
 
   res.set({
@@ -60,7 +61,7 @@ export async function getHlsSegment(req, res) {
   const segment = req.params.segment
 
   // Security check against path traversal
-  if (!/^segment_\d+\.ts$/.test(segment)) {
+  if (!/^(master\.m3u8|res_\w+\.m3u8|res_\w+_seg_\d+\.ts|segment_\d+\.ts)$/.test(segment)) {
     throw new AppError('Invalid segment requested', 400, 'BAD_REQUEST')
   }
 
@@ -68,9 +69,10 @@ export async function getHlsSegment(req, res) {
     throw new AppError('HLS stream not ready for this video', 404, 'HLS_NOT_READY')
   }
 
+  const isplaylist = segment.endsWith('.m3u8');
   res.set({
-    'Content-Type': 'video/MP2T',
-    'Cache-Control': 'public, max-age=31536000, immutable',
+    'Content-Type': isplaylist ? 'application/vnd.apple.mpegurl' : 'video/MP2T',
+    'Cache-Control': isplaylist ? 'no-cache, no-store, must-revalidate' : 'public, max-age=31536000, immutable',
   })
 
   const objectKey = `${video.hlsDirectory}/${segment}`

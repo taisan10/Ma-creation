@@ -4,6 +4,7 @@ import { fetchCourseVideos } from '../../lib/videoApi'
 import { getUser } from '../../lib/api'
 import ProtectedVideoPlayer from '../../components/video/ProtectedVideoPlayer'
 import RecordingDetectedModal from '../../components/video/RecordingDetectedModal'
+import DesktopAppBanner from '../../components/video/DesktopAppBanner'
 import { useRecordingGuard } from '../../lib/useRecordingGuard'
 
 export default function WatchVideoPage() {
@@ -29,11 +30,11 @@ export default function WatchVideoPage() {
     setSuspiciousReason(reason)
   }, [])
 
-  // Runs for the entire time this page is mounted -- i.e. for as long as a
-  // protected video could be on screen. Disabled once we've already shown
-  // the modal once, since useRecordingGuard only ever fires its callback a
-  // single time per mount anyway (see firedRef inside the hook).
-  useRecordingGuard(handleDetected, { enabled: !suspiciousReason })
+  // const isDesktop = typeof window !== 'undefined' && Boolean(window.electronAPI?.isDesktopApp)
+  const isDesktop = true 
+
+  // Runs for the entire time this page is mounted in desktop mode
+  useRecordingGuard(handleDetected, { enabled: isDesktop && !suspiciousReason })
 
   useEffect(() => {
     if (!getUser()) {
@@ -82,7 +83,11 @@ export default function WatchVideoPage() {
         ) : video && (
           <div className="mt-6">
             <h1 className="font-display text-2xl mb-4">{video.title}</h1>
-            <ProtectedVideoPlayer ref={playerRef} videoId={videoId} title={video.title} />
+            {isDesktop ? (
+              <ProtectedVideoPlayer ref={playerRef} videoId={videoId} title={video.title} />
+            ) : (
+              <DesktopAppBanner variant="player" title={video.title} />
+            )}
           </div>
         )}
 

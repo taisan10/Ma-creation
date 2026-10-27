@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
 import { connectDB } from "../config/db.js";
 import { env } from "../config/env.js";
 import User from "../models/User.js";
@@ -8,6 +7,7 @@ import Plan from "../models/Plan.js";
 import Page from "../models/Page.js";
 import FAQ from "../models/FAQ.js";
 import SiteSettings from "../models/SiteSettings.js";
+import { hashPassword } from "../utils/password.util.js";
 
 const services = [
   [
@@ -604,20 +604,23 @@ await Service.insertMany(services);
 await Plan.insertMany(plans);
 await Page.insertMany(pages);
 await FAQ.insertMany(faqs);
-if (!(await User.exists({ email: env.adminEmail }))) {
-  const passwordHash = await bcrypt.hash(
-    env.adminPassword,
-    12,
-  );
-  await User.create({
-    name: "MA Creation Admin",
-    email: env.adminEmail,
-    phone: "9999999999",
-    company: "MA Creation",
-    passwordHash,
-    role: "admin",
-  });
-}
+const passwordHash = await hashPassword(env.adminPassword);
+await User.findOneAndUpdate(
+  { email: env.adminEmail },
+  {
+    $set: {
+      name: "MA Creation Admin",
+      phone: "9999999999",
+      company: "MA Creation",
+      passwordHash,
+      role: "admin",
+      isActive: true,
+      failedLoginAttempts: 0,
+      lockedUntil: null,
+    },
+  },
+  { upsert: true, new: true }
+);
 await SiteSettings.findOneAndUpdate(
   { key: "brand" },
   {
