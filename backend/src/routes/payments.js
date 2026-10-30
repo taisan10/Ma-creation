@@ -18,13 +18,13 @@ const orderSchema = z.object({
 // No `authenticate` requirement any more -- checkout works for guests.
 // `optionalAuthenticate` still attaches req.user when a valid token is sent,
 // so a logged-in customer's payment stays linked to their account too.
-router.post('/order', optionalAuthenticate, validate(orderSchema), asyncHandler(c.createOrder))
-router.post('/verify', optionalAuthenticate, validate(z.object({
+router.post('/order', authenticate, validate(orderSchema), asyncHandler(c.createOrder))
+router.post('/verify', authenticate, validate(z.object({
   razorpay_order_id: z.string(),
   razorpay_payment_id: z.string(),
   razorpay_signature: z.string()
 })), asyncHandler(c.verifyPayment))
-router.post('/failed', optionalAuthenticate, validate(z.object({ razorpay_order_id: z.string() })), asyncHandler(c.markFailed))
+router.post('/failed', authenticate, validate(z.object({ razorpay_order_id: z.string() })), asyncHandler(c.markFailed))
 router.get('/mine', authenticate, asyncHandler(c.myPayments))
 
 export default router

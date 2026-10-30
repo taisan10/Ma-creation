@@ -1,0 +1,574 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "MA Creation API",
+    "description": "Comprehensive API documentation for MA Creation Backend, designed for Web and Mobile (Flutter/Android/iOS) integrations.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000/api",
+      "description": "Local Web & iOS Simulator Server"
+    },
+    {
+      "url": "http://10.0.2.2:5000/api",
+      "description": "Android Emulator Loopback"
+    },
+    {
+      "url": "https://api.yourdomain.com/api",
+      "description": "Production Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter the accessToken received from login/register/refresh endpoints."
+      },
+      "PlatformHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-client-platform",
+        "description": "Send 'MOBILE_ANDROID' or 'MOBILE_IOS' for mobile apps to receive refresh tokens in the JSON response."
+      }
+    },
+    "schemas": {
+      "StandardError": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "string", "example": "UNAUTHORIZED" },
+              "message": { "type": "string", "example": "Invalid or expired token" }
+            }
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "671e3b1234567890abcdef12" },
+          "name": { "type": "string", "example": "Rohan Sharma" },
+          "email": { "type": "string", "format": "email", "example": "rohan@example.com" },
+          "phone": { "type": "string", "example": "9876543210" },
+          "company": { "type": "string", "example": "Tech Solutions" },
+          "role": { "type": "string", "enum": ["customer", "admin"], "example": "customer" }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "token": { "type": "string", "description": "Access Token" },
+          "accessToken": { "type": "string", "description": "Access Token (alias)" },
+          "refreshToken": { "type": "string", "description": "Refresh token returned directly when x-client-platform is MOBILE_ANDROID/IOS" },
+          "user": { "$ref": "#/components/schemas/User" }
+        }
+      },
+      "Plan": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "name": { "type": "string", "example": "Creator Pro" },
+          "price": { "type": "number", "example": 2999 },
+          "billing": { "type": "string", "example": "One-time" },
+          "duration": { "type": "string", "example": "Lifetime Access" },
+          "features": { "type": "array", "items": { "type": "string" } },
+          "category": { "type": "string", "enum": ["service", "training"] },
+          "featured": { "type": "boolean" }
+        }
+      },
+      "Course": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "title": { "type": "string", "example": "Premiere Pro Masterclass" },
+          "description": { "type": "string" },
+          "thumbnailUrl": { "type": "string" },
+          "planName": { "type": "string", "example": "Creator Pro" }
+        }
+      },
+      "Video": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "title": { "type": "string", "example": "Lesson 1: Timeline Basics" },
+          "description": { "type": "string" },
+          "durationSeconds": { "type": "number", "example": 720 },
+          "thumbnailUrl": { "type": "string" },
+          "order": { "type": "number", "example": 1 },
+          "isHlsReady": { "type": "boolean", "example": true }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register a new user account",
+        "parameters": [
+          { "$ref": "#/components/securitySchemes/PlatformHeader" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password", "phone"],
+                "properties": {
+                  "name": { "type": "string", "example": "Rohan Sharma" },
+                  "email": { "type": "string", "format": "email", "example": "rohan@example.com" },
+                  "password": { "type": "string", "minLength": 8, "example": "Password@123" },
+                  "phone": { "type": "string", "example": "9876543210" },
+                  "company": { "type": "string", "example": "Tech Solutions" },
+                  "interest": { "type": "string", "example": "Video Editing" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } }
+          },
+          "400": { "description": "Validation error" }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Login with email & password",
+        "parameters": [
+          { "$ref": "#/components/securitySchemes/PlatformHeader" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "example": "rohan@example.com" },
+                  "password": { "type": "string", "example": "Password@123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } }
+          },
+          "401": { "description": "Invalid credentials", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StandardError" } } } }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Refresh Access Token using Refresh Token",
+        "parameters": [
+          { "$ref": "#/components/securitySchemes/PlatformHeader" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": { "type": "string", "example": "4a7f9c2d1b8e..." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tokens refreshed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } }
+          },
+          "401": { "description": "Token invalid or revoked" }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Get authenticated user profile",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Profile retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "user": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Logout from current device",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/securitySchemes/PlatformHeader" }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refreshToken": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Logged out successfully" }
+        }
+      }
+    },
+    "/courses/has-access": {
+      "get": {
+        "tags": ["Courses"],
+        "summary": "Check if user has any paid plan/courses unlocked",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Access status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "hasAccess": { "type": "boolean", "example": true }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/courses/mine": {
+      "get": {
+        "tags": ["Courses"],
+        "summary": "List all courses unlocked for the user",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Categorized courses list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "category": { "type": "object" },
+                      "courses": { "type": "array", "items": { "$ref": "#/components/schemas/Course" } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/courses/{courseId}/videos": {
+      "get": {
+        "tags": ["Courses"],
+        "summary": "Get all lectures/videos in a course",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "courseId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of course videos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Video" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/videos/{videoId}/playback-token": {
+      "post": {
+        "tags": ["Video Streaming"],
+        "summary": "Generate short-lived DRM playback token for video playback",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "videoId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Playback token and HLS manifest URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": { "type": "string", "example": "/api/videos/671e.../hls/manifest.m3u8" },
+                    "token": { "type": "string", "example": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d" },
+                    "expiresAt": { "type": "string", "format": "date-time" },
+                    "remainingSeconds": { "type": "number", "example": 1440 }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/videos/{videoId}/hls/manifest.m3u8": {
+      "get": {
+        "tags": ["Video Streaming"],
+        "summary": "Stream master HLS playlist (AES-128 protected)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "videoId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "HLS master m3u8 playlist stream" }
+        }
+      }
+    },
+    "/videos/{videoId}/key": {
+      "get": {
+        "tags": ["Video Streaming"],
+        "summary": "Deliver 16-byte AES-128 decryption key to video player",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "videoId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Raw binary AES-128 decryption key" }
+        }
+      }
+    },
+    "/videos/{videoId}/watch-event": {
+      "post": {
+        "tags": ["Video Streaming"],
+        "summary": "Heartbeat to log watched seconds and check plan watch quota",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "videoId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["token", "watchedSeconds"],
+                "properties": {
+                  "token": { "type": "string", "description": "Playback token" },
+                  "watchedSeconds": { "type": "number", "example": 30 },
+                  "currentPosition": { "type": "number", "example": 120 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Watch progress logged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "totalWatchedSeconds": { "type": "number" },
+                    "remainingSeconds": { "type": "number" },
+                    "percentUsed": { "type": "number" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalog/plans": {
+      "get": {
+        "tags": ["Plans & Pricing"],
+        "summary": "List all active pricing plans",
+        "responses": {
+          "200": {
+            "description": "Active plans list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plans": { "type": "array", "items": { "$ref": "#/components/schemas/Plan" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payments/order": {
+      "post": {
+        "tags": ["Payments & Checkout"],
+        "summary": "Create Razorpay Order for purchasing a plan",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["planId", "name", "email", "phone"],
+                "properties": {
+                  "planId": { "type": "string", "example": "671e..." },
+                  "name": { "type": "string", "example": "Rohan Sharma" },
+                  "email": { "type": "string", "example": "rohan@example.com" },
+                  "phone": { "type": "string", "example": "9876543210" },
+                  "company": { "type": "string", "example": "Tech Solutions" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Razorpay order created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "keyId": { "type": "string", "example": "rzp_test_..." },
+                    "order": { "type": "object" },
+                    "paymentId": { "type": "string" },
+                    "plan": { "type": "object" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payments/verify": {
+      "post": {
+        "tags": ["Payments & Checkout"],
+        "summary": "Verify Razorpay payment signature & activate course plan",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["razorpay_order_id", "razorpay_payment_id", "razorpay_signature"],
+                "properties": {
+                  "razorpay_order_id": { "type": "string" },
+                  "razorpay_payment_id": { "type": "string" },
+                  "razorpay_signature": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "payment": { "type": "object" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/books": {
+      "get": {
+        "tags": ["Public Content"],
+        "summary": "List available reading materials and books",
+        "responses": {
+          "200": { "description": "Books list" }
+        }
+      }
+    },
+    "/leads": {
+      "post": {
+        "tags": ["Public Content"],
+        "summary": "Submit Contact / Inquiry lead",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "phone"],
+                "properties": {
+                  "name": { "type": "string", "example": "Amit Patel" },
+                  "email": { "type": "string", "example": "amit@example.com" },
+                  "phone": { "type": "string", "example": "9812345678" },
+                  "company": { "type": "string", "example": "Apex Media" },
+                  "service": { "type": "string", "example": "Video Production" },
+                  "budget": { "type": "string", "example": "₹50,000 - ₹1,00,000" },
+                  "notes": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Lead submitted successfully" }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Health check for API and Database",
+        "responses": {
+          "200": { "description": "Service is healthy" }
+        }
+      }
+    }
+  }
+}

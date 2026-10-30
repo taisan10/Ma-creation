@@ -45,11 +45,10 @@ export default function CheckoutInfoModal({ planName, onCancel, onSubmit, submit
             <input id="co-name" className="field-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
             {touched && form.name.trim().length < 2 && <p className="text-rust text-xs mt-1">Please enter your name.</p>}
           </div>
-          <div>
-            <label className="field-label" htmlFor="co-email">Email *</label>
-            <input id="co-email" type="email" className="field-input" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
-            {touched && !/\S+@\S+\.\S+/.test(form.email) && <p className="text-rust text-xs mt-1">Please enter a valid email.</p>}
-          </div>
+         <div>
+  <label className="field-label" htmlFor="co-email">Email (Account)</label>
+  <input id="co-email" type="email" className="field-input bg-paper2/60 cursor-not-allowed opacity-80" value={form.email} readOnly required />
+</div>
           <div>
             <label className="field-label" htmlFor="co-phone">Contact number *</label>
             <input id="co-phone" type="tel" className="field-input" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required />

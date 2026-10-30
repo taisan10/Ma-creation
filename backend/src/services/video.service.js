@@ -88,10 +88,14 @@ export class VideoService {
       throw new AppError('Playback locked by security policy. Admin approval required.', 403, 'PLAYBACK_LOCKED')
     }
 
-    // Anti-leech / Hotlinking Protection (Works dynamically for both Localhost & Production Domain)
+    // Anti-leech / Hotlinking Protection (Works dynamically for Localhost, Production & Tunnels)
     if (req && env.clientUrl) {
       const origin = req.headers.origin || req.headers.referer || '';
-      if (origin && !origin.startsWith(env.clientUrl)) {
+      const isAllowed = origin.startsWith(env.clientUrl) || // production se pahle remove krna hai 
+                        origin.includes('localhost') || 
+                        origin.includes('pinggy') || 
+                        origin.includes('trycloudflare');
+      if (origin && !isAllowed) {
         throw new AppError('Key request from unauthorized domain denied', 403, 'UNAUTHORIZED_DOMAIN')
       }
     }

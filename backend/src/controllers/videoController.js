@@ -52,6 +52,30 @@ export async function getHlsManifest(req, res) {
     'Cache-Control': 'no-cache, no-store, must-revalidate',
   })
 
+  // Agar query parameter mein token aaya hai (Flutter / Mobile player)
+  const token = req.query?.token 
+  if(token){
+    const stream = await minioClient.getObject(VIDEO_BUCKET, video.hlsManifestKey)
+    const chunks = []
+    for await (const chunk of stream){
+      chunks.push(chunk)
+    }
+    let content = Buffer.concat(chunks).toString('utf-8')
+
+    // Key URL aur Segment URLs me ?token= append karein
+    content = content.replace(
+      new RegExp(`(/api/videos/${video._id}/key)`, 'g'),
+      `$1?token=${encodeURIComponent(token)}`
+    )
+     content = content.replace(
+      /(segment_\d+\.ts)/g,
+      `$1?token=${encodeURIComponent(token)}`
+    )
+    return res.send(content)
+
+  }
+
+
   const stream = await minioClient.getObject(VIDEO_BUCKET, video.hlsManifestKey)
   stream.pipe(res)
 }

@@ -119,6 +119,17 @@ services:
       - lms_internal
     restart: unless-stopped
 
+      # ---- Cloudflare Quick Tunnel (Only Backend for Flutter) ----
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: lms_tunnel
+    command: tunnel --url http://backend:5000 --no-autoupdate
+    networks:
+      - lms_internal
+    depends_on:
+      - backend
+    restart: unless-stopped
+
 volumes:
   video_tmp:
   mongo_data:

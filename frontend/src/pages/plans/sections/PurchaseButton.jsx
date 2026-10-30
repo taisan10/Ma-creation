@@ -22,8 +22,6 @@ function restoreScroll() {
   document.body.style.overflow = ''
   document.body.style.position = ''
   document.documentElement.style.overflow = ''
-  // Razorpay ke bache hue backdrop / container frames ko clean karein
-  document.querySelectorAll('.razorpay-container, iframe[src*="razorpay"]').forEach(el => el.remove())
 }
 
 
@@ -38,6 +36,7 @@ export default function PurchaseButton({ planId, planName, alreadyPurchased = fa
   const [ownedNotice, setOwnedNotice] = useState(false)
 
   async function proceed(contact) {
+    if (busy) return
     setBusy(true)
     setError('')
     let orderData
@@ -74,6 +73,7 @@ export default function PurchaseButton({ planId, planName, alreadyPurchased = fa
       prefill: { name: contact.name, email: contact.email, contact: contact.phone },
       theme: { color: theme.primary },
           handler: async response => {
+        try { rzp.close?.() } catch (_) {}
         restoreScroll() // 👈 1. Scroll unlock karein
         try {
           const verified = await api('/payments/verify', { method: 'POST', body: JSON.stringify(response) })
@@ -117,6 +117,11 @@ export default function PurchaseButton({ planId, planName, alreadyPurchased = fa
     setError('')
     if (alreadyPurchased) {
       setOwnedNotice(true)
+      return
+    }
+    const user = getUser()
+    if(!user){
+      navigate('/login',{state: {from: '/plans'}})
       return
     }
     setShowModal(true)

@@ -17,10 +17,18 @@ import {
   CheckCircle2,
   X,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Lock,
+  Play,
+  Copy,
+  Check,
+  HardDrive
 } from 'lucide-react'
 import AdminShell from '../../components/admin/AdminShell'
 import { api } from '../../lib/api'
+import { uploadVideoWithRealProgress } from '../../lib/videoUpload'
+import VideoUploadFloatingDock from './components/VideoUploadFloatingDock'
+import AdminVideoPreviewModal from './components/AdminVideoPreviewModal'
 
 export default function AdminCourses() {
   const [activeTab, setActiveTab] = useState('courses') // 'courses' | 'videos' | 'categories'
@@ -32,6 +40,42 @@ export default function AdminCourses() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [activeUpload, setActiveUpload] = useState(null)
+  const [previewVideo, setPreviewVideo] = useState(null)
+  const abortUploadRef = useRef(null)
+
+  // Background poller for active floating dock upload across all tabs
+  useEffect(() => {
+    if (!activeUpload?.id || !activeUpload?.courseId) return
+    if (activeUpload.status === 'READY' || activeUpload.status === 'FAILED') return
+
+    const timer = setInterval(async () => {
+      try {
+        const res = await api(`/admin/lms/videos?courseId=${activeUpload.courseId}`)
+        if (res?.videos) {
+          const target = res.videos.find((v) => v._id === activeUpload.id)
+          if (target) {
+            if (target.status === 'READY') {
+              setActiveUpload((prev) => (prev ? { ...prev, status: 'READY', percent: 100 } : null))
+              setVideos((prev) => prev.map((v) => (v._id === target._id ? target : v)))
+            } else if (target.status === 'PROCESSING') {
+              setActiveUpload((prev) =>
+                prev ? { ...prev, status: 'PROCESSING', percent: target.processingProgress || 30 } : null
+              )
+              setVideos((prev) => prev.map((v) => (v._id === target._id ? target : v)))
+            } else if (target.status === 'FAILED') {
+              setActiveUpload((prev) => (prev ? { ...prev, status: 'FAILED' } : null))
+              setVideos((prev) => prev.map((v) => (v._id === target._id ? target : v)))
+            }
+          }
+        }
+      } catch (_) {
+        // Silent fail on background poll
+      }
+    }, 2500)
+
+    return () => clearInterval(timer)
+  }, [activeUpload?.id, activeUpload?.status, activeUpload?.courseId])
 
   // Universal Delete Confirmation Modal State
   const [deleteModal, setDeleteModal] = useState({
@@ -261,6 +305,10 @@ export default function AdminCourses() {
             setMessage={setMessage}
             setError={setError}
             onOpenDelete={(video) => openDeleteModal('video', video)}
+            activeUpload={activeUpload}
+            setActiveUpload={setActiveUpload}
+            abortUploadRef={abortUploadRef}
+            onPreviewVideo={setPreviewVideo}
           />
         )}
 
@@ -304,6 +352,28 @@ export default function AdminCourses() {
             </div>
           </div>
         </div>
+      )}
+      {/* Floating YouTube Studio Style Upload Dock */}
+      {activeUpload && (
+        <VideoUploadFloatingDock
+          upload={activeUpload}
+          onCancel={() => {
+            if (abortUploadRef.current) {
+              abortUploadRef.current()
+              abortUploadRef.current = null
+            }
+            setActiveUpload(null)
+            setMessage('Video upload was cancelled.')
+          }}
+          onDismiss={() => setActiveUpload(null)}
+        />
+      )}
+      {/* In-Place Video Lesson Preview Modal */}
+      {previewVideo && (
+        <AdminVideoPreviewModal
+          video={previewVideo}
+          onClose={() => setPreviewVideo(null)}
+        />
       )}
     </AdminShell>
   )
@@ -586,6 +656,10 @@ function VideosSection({
   setMessage,
   setError,
   onOpenDelete,
+  activeUpload,
+  setActiveUpload,
+  abortUploadRef,
+  onPreviewVideo,
 }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -593,7 +667,101 @@ function VideosSection({
   const [detectedDuration, setDetectedDuration] = useState(0)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadStats, setUploadStats] = useState({
+    percent: 0,
+    formattedLoaded: '',
+    formattedSpeed: '',
+    formattedEta: '',
+  })
+  const [videoSearch, setVideoSearch] = useState('')
+  const [videoFilter, setVideoFilter] = useState('ALL') // 'ALL' | 'READY' | 'PROCESSING' | 'FAILED'
+  const [copiedId, setCopiedId] = useState(null)
+  const copyTimerRef = useRef(null)
   const inputRef = useRef(null)
+
+  function copyVideoId(id) {
+    if (!id) return
+    try {
+      navigator.clipboard?.writeText(id)
+      setCopiedId(id)
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = setTimeout(() => setCopiedId(null), 2000)
+    } catch (_) {}
+  }
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    }
+  }, [])
+
+  const courseStats = useMemo(() => {
+    let totalSecs = 0
+    let totalBytes = 0
+    let readyCount = 0
+    let processingCount = 0
+
+    videos.forEach((v) => {
+      totalSecs += v.durationSeconds || 0
+      totalBytes += v.fileSizeBytes || 0
+      if (v.status === 'READY' || v.isHlsReady) readyCount++
+      if (
+        v.status === 'PROCESSING' ||
+        v.status === 'QUEUED' ||
+        v.status === 'UPLOADING' ||
+        v.status === 'PENDING'
+      ) {
+        processingCount++
+      }
+    })
+
+    const hours = Math.floor(totalSecs / 3600)
+    const minutes = Math.floor((totalSecs % 3600) / 60)
+    const durationStr =
+      hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m ${totalSecs % 60}s`
+    const sizeStr =
+      totalBytes >= 1024 * 1024 * 1024
+        ? `${(totalBytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+        : `${(totalBytes / (1024 * 1024)).toFixed(1)} MB`
+
+    return { totalSecs, durationStr, totalBytes, sizeStr, readyCount, processingCount }
+  }, [videos])
+
+  const filteredVideos = useMemo(() => {
+    return videos.filter((v) => {
+      const q = videoSearch.trim().toLowerCase()
+      const matchesSearch =
+        !q ||
+        v.title?.toLowerCase().includes(q) ||
+        v.description?.toLowerCase().includes(q)
+
+      if (!matchesSearch) return false
+
+      if (videoFilter === 'READY') return v.status === 'READY' || v.isHlsReady
+      if (videoFilter === 'PROCESSING') {
+        return (
+          v.status === 'PROCESSING' ||
+          v.status === 'QUEUED' ||
+          v.status === 'UPLOADING' ||
+          v.status === 'PENDING'
+        )
+      }
+      if (videoFilter === 'FAILED') return v.status === 'FAILED'
+
+      return true
+    })
+  }, [videos, videoSearch, videoFilter])
+
+  function handleCancelUpload() {
+    if (abortUploadRef.current) {
+      abortUploadRef.current()
+      abortUploadRef.current = null
+    }
+    setUploading(false)
+    setUploadProgress(0)
+    setActiveUpload(null)
+    setMessage('Video upload was cancelled.')
+  }
 
   // Load videos whenever the selected course changes
   async function loadVideos(cId) {
@@ -676,9 +844,23 @@ function VideosSection({
     setMessage('')
     if (!selectedCourseId) return setError('Please choose a course first.')
     if (!file) return setError('Please choose a video file to upload.')
-
+    const fileExt = '.' + file.name.split('.').pop().toLowerCase()
+    const allowedExts = ['.mp4', '.webm', '.mov', '.mkv']
+    if (!allowedExts.includes(fileExt)) {
+      return setError('Invalid video format. Only MP4, WebM, MOV, and MKV files are allowed.')
+    }
+    if (file.size > 5 * 1024 * 1024 * 1024) {
+      return setError('File size exceeds the 5 GB server limit.')
+    }
     setUploading(true)
-    setUploadProgress(15)
+    setUploadProgress(0)
+    setUploadStats({
+      percent: 0,
+      formattedLoaded: `0 B / ${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+      formattedSpeed: 'Connecting…',
+      formattedEta: '',
+    })
+
     try {
       // Step 1: Create metadata record in MongoDB
       const created = await api('/admin/lms/videos', {
@@ -692,38 +874,63 @@ function VideosSection({
       })
       const videoId = created.video._id
 
-      // 🚀 Optimistic Instant Insert: Show video in playlist immediately so user knows it started!
+      // Set active floating dock upload state
+      setActiveUpload({
+        id: videoId,
+        courseId: selectedCourseId,
+        title: title || file.name,
+        fileName: file.name,
+        fileSizeFormatted: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+        status: 'UPLOADING',
+        percent: 0,
+        formattedLoaded: `0 B / ${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+        formattedSpeed: 'Connecting…',
+        formattedEta: '',
+      })
+
+      // 🚀 Optimistic Instant Insert: Show video in playlist immediately
       const initialDoc = {
         ...created.video,
         status: 'UPLOADING',
-        processingProgress: 5,
+        processingProgress: 0,
         fileSizeBytes: file.size,
       }
       setVideos((prev) => [...prev, initialDoc])
-      setUploadProgress(40)
 
-      // Step 2: Stream file directly into MinIO (multipart field: "video")
-      const formData = new FormData()
-      formData.append('video', file, file.name)
-
-      const uploadRes = await api(`/admin/lms/videos/${videoId}/upload`, {
-        method: 'POST',
-        body: formData,
-        retry: false,
+      // Step 2: Stream file with REAL byte-by-byte XHR progress and speed tracking
+      const uploadRes = await uploadVideoWithRealProgress({
+        videoId,
+        file,
+        onProgress: (stats) => {
+          setUploadProgress(stats.percent)
+          setUploadStats(stats)
+          setActiveUpload((prev) => (prev ? { ...prev, ...stats } : prev))
+        },
+        onAbortRef: (abortFn) => {
+          abortUploadRef.current = abortFn
+        },
       })
 
-      setUploadProgress(100)
+      // Update state to QUEUED immediately after file is safely saved on server disk
+      setActiveUpload((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: 'QUEUED',
+              percent: 10,
+            }
+          : null
+      )
 
-      // Update state to QUEUED immediately
       setVideos((prev) =>
         prev.map((v) =>
           v._id === videoId
-            ? { ...v, status: 'QUEUED', processingProgress: 10, fileSizeBytes: uploadRes.fileSizeBytes || file.size }
+            ? { ...v, status: 'QUEUED', processingProgress: 5, fileSizeBytes: uploadRes.fileSizeBytes || file.size }
             : v
         )
       )
 
-      setMessage(`Video lesson "${title}" uploaded! Background HLS AES-128 transcoding started.`)
+      setMessage(`✓ Video "${title}" uploaded! Queued for background transcoding. You can safely close or navigate away.`)
       setTitle('')
       setDescription('')
       setFile(null)
@@ -732,10 +939,15 @@ function VideosSection({
       // Sync fresh list from database
       await loadVideos(selectedCourseId)
     } catch (e) {
-      setError(e.message)
+      if (e.message !== 'Upload cancelled by user.') {
+        setError(e.message)
+      }
+      setActiveUpload((prev) => (prev ? { ...prev, status: 'FAILED' } : null))
     } finally {
       setUploading(false)
       setUploadProgress(0)
+      setUploadStats({ percent: 0, formattedLoaded: '', formattedSpeed: '', formattedEta: '' })
+      abortUploadRef.current = null
     }
   }
 
@@ -834,24 +1046,43 @@ function VideosSection({
               )}
             </div>
 
-            {/* Upload Button & Progress */}
+            {/* Upload Button & Real-Time Metrics */}
             {uploading && (
-              <div className="space-y-1 mt-2">
-                <div className="flex justify-between text-xs font-semibold text-ink/70">
-                  <span>
-                    {uploadProgress < 30
-                      ? 'Creating record...'
-                      : uploadProgress < 100
-                      ? 'Streaming to NVMe storage...'
-                      : 'Handing off to BullMQ worker...'}
+              <div className="space-y-2 mt-3 p-4 rounded-xl border border-gold/30 bg-gold/5 shadow-sm">
+                <div className="flex items-center justify-between text-xs font-semibold text-ink">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-gold animate-ping" />
+                    Streaming file to server storage...
                   </span>
-                  <span>{uploadProgress}%</span>
+                  <span className="font-mono text-sm text-gold font-bold">{uploadStats.percent}%</span>
                 </div>
-                <div className="w-full bg-paper2 rounded-full h-2 overflow-hidden border border-ink/10">
+
+                <div className="w-full bg-paper2 rounded-full h-2.5 overflow-hidden border border-ink/10">
                   <div
-                    className="bg-gold h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
+                    className="bg-gold h-2.5 rounded-full transition-all duration-200"
+                    style={{ width: `${uploadStats.percent}%` }}
                   />
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] text-ink/70 font-mono">
+                  <span>{uploadStats.formattedLoaded || 'Preparing file…'}</span>
+                  <div className="flex items-center gap-2">
+                    {uploadStats.formattedSpeed && <span>{uploadStats.formattedSpeed}</span>}
+                    {uploadStats.formattedEta && <span className="text-gold font-semibold">· {uploadStats.formattedEta}</span>}
+                  </div>
+                </div>
+
+                <div className="pt-1.5 flex items-center justify-between border-t border-gold/15">
+                  <span className="text-[10px] text-rust font-medium">⚠️ Keep this tab open until upload reaches 100%</span>
+                  {abortUploadRef.current && (
+                    <button
+                      type="button"
+                      onClick={handleCancelUpload}
+                      className="text-[11px] text-rust hover:underline font-semibold"
+                    >
+                      Cancel Upload
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -861,7 +1092,7 @@ function VideosSection({
               disabled={uploading || !selectedCourseId || !file}
               className="btn-gold btn-block rounded-xl py-3 mt-3 shadow-md disabled:opacity-50"
             >
-              {uploading ? 'Uploading to NVMe storage…' : 'Upload & Encrypt Video'}
+              {uploading ? 'Streaming to Server…' : 'Upload Video Lesson'}
             </button>
           </form>
         </div>
@@ -870,10 +1101,14 @@ function VideosSection({
       {/* Right Column: Playlist of Existing Videos */}
       <div className="lg:col-span-7">
         <div className="card p-6 rounded-2xl shadow-card border border-ink/10">
-          <div className="flex items-center justify-between gap-4 pb-4 border-b border-ink/10">
+          {/* Header with Title and Course Aggregate Stats */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-ink/10">
             <div>
-              <h2 className="font-display text-lg font-semibold text-ink">
-                {activeCourseObj ? activeCourseObj.title : 'Course Videos'}
+              <h2 className="font-display text-lg font-semibold text-ink flex items-center gap-2">
+                <span>{activeCourseObj ? activeCourseObj.title : 'Course Videos'}</span>
+                <span className="badge bg-gold/15 text-gold border-gold/30 text-[11px] font-mono">
+                  {videos.length} {videos.length === 1 ? 'Lesson' : 'Lessons'}
+                </span>
               </h2>
               <p className="text-xs text-ink/60 mt-0.5">
                 {activeCourseObj
@@ -881,10 +1116,77 @@ function VideosSection({
                   : 'Select a course to review its video playlist.'}
               </p>
             </div>
-            <span className="badge bg-paper2 text-ink/80 border-ink/15 font-mono">
-              {videos.length} {videos.length === 1 ? 'Lesson' : 'Lessons'}
-            </span>
+
+            {/* Quick Metrics Pills */}
+            {selectedCourseId && videos.length > 0 && (
+              <div className="flex items-center gap-2 text-xs font-mono">
+                <span
+                  className="px-2.5 py-1 rounded-lg bg-paper2 border border-ink/10 text-ink/70 flex items-center gap-1.5"
+                  title="Total Course Runtime"
+                >
+                  <Clock size={13} className="text-gold" />
+                  <span>{courseStats.durationStr}</span>
+                </span>
+                <span
+                  className="px-2.5 py-1 rounded-lg bg-paper2 border border-ink/10 text-ink/70 flex items-center gap-1.5"
+                  title="Total Encrypted Storage"
+                >
+                  <HardDrive size={13} className="text-teal" />
+                  <span>{courseStats.sizeStr}</span>
+                </span>
+              </div>
+            )}
           </div>
+
+          {/* Search & Status Filter Bar */}
+          {selectedCourseId && videos.length > 0 && (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 pt-1">
+              {/* Search input */}
+              <div className="relative flex-1 min-w-[180px]">
+                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/40" />
+                <input
+                  type="text"
+                  placeholder="Search lessons by title..."
+                  value={videoSearch}
+                  onChange={(e) => setVideoSearch(e.target.value)}
+                  className="w-full pl-9 pr-7 py-1.5 text-xs rounded-xl bg-paper2/60 border border-ink/15 focus:border-gold focus:outline-none text-ink placeholder:text-ink/40 font-medium"
+                />
+                {videoSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setVideoSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink/40 hover:text-ink"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              {/* Status Filter Chips */}
+              <div className="flex items-center gap-1 text-xs">
+                {['ALL', 'READY', 'PROCESSING', 'FAILED'].map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setVideoFilter(st)}
+                    className={`px-2.5 py-1 rounded-lg font-medium text-[11px] transition-colors ${
+                      videoFilter === st
+                        ? 'bg-gold text-white shadow-sm'
+                        : 'bg-paper2 text-ink/60 hover:text-ink hover:bg-paper2/80'
+                    }`}
+                  >
+                    {st === 'ALL'
+                      ? 'All'
+                      : st === 'READY'
+                      ? `Ready (${courseStats.readyCount})`
+                      : st === 'PROCESSING'
+                      ? `Active (${courseStats.processingCount})`
+                      : 'Failed'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="mt-5 space-y-3">
             {!selectedCourseId ? (
@@ -897,8 +1199,13 @@ function VideosSection({
                 <VideoIcon size={32} className="mx-auto mb-2 opacity-50" />
                 No video lessons uploaded for this course yet.
               </div>
+            ) : filteredVideos.length === 0 ? (
+              <div className="py-10 text-center text-ink/40 text-sm">
+                <Search size={28} className="mx-auto mb-2 opacity-40" />
+                No video lessons match your filter "{videoSearch || videoFilter}".
+              </div>
             ) : (
-              videos.map((vid, idx) => {
+              filteredVideos.map((vid, idx) => {
                 const isReady = vid.status === 'READY' || vid.isHlsReady
                 const isFailed = vid.status === 'FAILED'
                 const isProcessing =
@@ -912,19 +1219,19 @@ function VideosSection({
 
                 let stageText = 'Waiting...'
                 if (vid.status === 'PENDING') {
-                  stageText = '1/5: Initializing video record in MongoDB...'
+                  stageText = 'Initializing video record...'
                 } else if (vid.status === 'UPLOADING') {
-                  stageText = '1/5: Streaming to NVMe storage (/tmp) via Busboy (Zero RAM)...'
+                  stageText = 'Phase 1: Streaming file to server storage (Do not close tab)...'
                 } else if (vid.status === 'QUEUED') {
-                  stageText = '2/5: Saved to disk! Queued in BullMQ worker (1.0 vCPU lock)...'
+                  stageText = 'Phase 2: Saved on server! Queued for background worker (Safe to leave)...'
                 } else if (vid.status === 'PROCESSING') {
                   if (progress < 85) {
-                    stageText = `3/5: FFmpeg ABR Multi-Bitrate Encoding (1080p + 720p + 360p) · ${progress}%`
+                    stageText = `Phase 2: FFmpeg Multi-bitrate Transcoding (1080p+720p+360p) · ${progress}%`
                   } else {
-                    stageText = `4/5: AES-128 DRM Packaging & MinIO S3 Upload · ${progress}%`
+                    stageText = `Phase 2: AES-128 DRM Packaging & Storage Upload · ${progress}%`
                   }
                 } else if (isReady) {
-                  stageText = '5/5: 100% Ready (Multi-bitrate HLS AES-128 Stream)'
+                  stageText = '✓ Live: Protected Multi-Bitrate HLS Stream'
                 } else if (isFailed) {
                   stageText = `Failed: ${vid.errorMessage || 'Transcoding error'}`
                 }
@@ -940,30 +1247,33 @@ function VideosSection({
                         : 'border-ink/10 bg-paper2/30 hover:bg-paper2/60'
                     }`}
                   >
-                    {/* Top Row: Title, Duration, Status, Delete */}
+                    {/* Top Row: Index, Title, Meta, and Action Buttons */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3 min-w-0">
-                        <span className="w-7 h-7 rounded-lg bg-gold/15 text-gold text-xs font-mono font-bold flex items-center justify-center shrink-0 mt-0.5">
-                          #{idx + 1}
+                        <span className="w-8 h-8 rounded-xl bg-gold/15 text-gold text-xs font-mono font-bold flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                          {String(idx + 1).padStart(2, '0')}
                         </span>
                         <div className="min-w-0">
-                          <h4 className="text-sm font-semibold text-ink truncate">{vid.title}</h4>
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-ink/60 mt-1">
-                            <span className="flex items-center gap-1 font-mono">
-                              <Clock size={12} />
+                          <h4 className="text-sm font-semibold text-ink truncate leading-tight">
+                            {vid.title}
+                          </h4>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-ink/60 mt-1.5 font-mono">
+                            <span className="flex items-center gap-1 text-[11px]">
+                              <Clock size={12} className="text-gold" />
                               {vid.durationSeconds
                                 ? `${Math.floor(vid.durationSeconds / 60)}m ${vid.durationSeconds % 60}s`
                                 : '0m 00s'}
                             </span>
                             <span>•</span>
-                            <span className="font-mono">
+                            <span className="flex items-center gap-1 text-[11px]">
+                              <HardDrive size={12} className="text-teal" />
                               {vid.fileSizeBytes
                                 ? `${(vid.fileSizeBytes / 1024 / 1024).toFixed(1)} MB`
                                 : 'MP4'}
                             </span>
                             <span>•</span>
                             <span
-                              className={`font-semibold px-2 py-0.5 rounded-full text-[11px] font-mono border ${
+                              className={`font-semibold px-2 py-0.5 rounded-full text-[10px] font-mono border ${
                                 isReady
                                   ? 'bg-teal/10 text-teal border-teal/20'
                                   : isFailed
@@ -971,20 +1281,35 @@ function VideosSection({
                                   : 'bg-gold/15 text-gold border-gold/30 animate-pulse'
                               }`}
                             >
-                              {vid.status || (isReady ? 'READY' : 'PENDING')}
+                              {isReady ? 'PUBLISHED' : vid.status || 'PENDING'}
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => onOpenDelete(vid)}
-                        className="p-1.5 text-ink/40 hover:text-rust rounded-lg hover:bg-rust/10 transition-colors shrink-0"
-                        title="Delete video"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      {/* Top-Right Action Controls */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => copyVideoId(vid._id)}
+                          className="p-1.5 text-ink/40 hover:text-ink rounded-lg hover:bg-paper2 transition-colors"
+                          title={copiedId === vid._id ? 'Copied Video ID!' : 'Copy Video ID'}
+                        >
+                          {copiedId === vid._id ? (
+                            <Check size={14} className="text-teal" />
+                          ) : (
+                            <Copy size={14} />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onOpenDelete(vid)}
+                          className="p-1.5 text-ink/40 hover:text-rust rounded-lg hover:bg-rust/10 transition-colors shrink-0"
+                          title="Delete video lesson"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Live Pipeline Stepper Box (Shows for Processing & Queued videos) */}
@@ -1050,22 +1375,48 @@ function VideosSection({
                               isReady ? 'bg-teal/10 text-teal font-bold' : 'text-ink/40'
                             }`}
                           >
-                            5. Ready
+                            5. Stream Live
                           </span>
                         </div>
                       </div>
                     )}
 
-                    {/* Ready Badge: Shows ABR Resolutions & AES-128 Encryption */}
+                    {/* Ready Badges: Enterprise ABR Resolution Badges & DRM Lock */}
                     {isReady && (
                       <div className="mt-3 pt-2.5 border-t border-ink/10 flex flex-wrap items-center justify-between gap-2 text-xs">
-                        <div className="flex items-center gap-1.5 text-teal text-[11px] font-medium font-mono">
-                          <CheckCircle2 size={13} />
-                          <span>ABR Streams: 1080p · 720p · 360p</span>
+                        {/* ABR Resolution Badges */}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-gold/15 text-gold border border-gold/25 shadow-2xs">
+                            1080p FHD
+                          </span>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-teal/10 text-teal border border-teal/20 shadow-2xs">
+                            720p HD
+                          </span>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-paper2 text-ink/70 border border-ink/10 shadow-2xs">
+                            360p SD
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-card text-ink/70 border border-ink/10">
+                            <Lock size={10} className="text-teal" />
+                            <span>AES-128 DRM</span>
+                          </span>
                         </div>
-                        <span className="text-[11px] font-mono text-ink/50 bg-paper2 px-2 py-0.5 rounded border border-ink/10">
-                          🔐 AES-128 DRM Protected · MinIO
-                        </span>
+
+                        {/* Preview Stream trigger (Ready for Step 4) */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono text-ink/40 hidden sm:inline">
+                            HLS Multi-Bitrate
+                          </span>
+                          {onPreviewVideo && (
+                            <button
+                              type="button"
+                              onClick={() => onPreviewVideo(vid)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-gold/10 text-gold hover:bg-gold hover:text-white transition-all shadow-sm"
+                            >
+                              <Play size={11} fill="currentColor" />
+                              <span>Preview</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )}
 

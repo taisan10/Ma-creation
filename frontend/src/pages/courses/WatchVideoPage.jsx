@@ -30,6 +30,7 @@ export default function WatchVideoPage() {
     setSuspiciousReason(reason)
   }, [])
 
+  // priduction mai jaane se pahle ise update krna h (inform krna muje is line ka)
   // const isDesktop = typeof window !== 'undefined' && Boolean(window.electronAPI?.isDesktopApp)
   const isDesktop = true 
 

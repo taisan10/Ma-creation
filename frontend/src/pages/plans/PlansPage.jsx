@@ -12,21 +12,26 @@ export default function PlansPage() {
     let active = true
     api('/catalog/plans').then(d => { if (active) setPlans(d.plans || []) }).catch(() => {})
     api('/public/pages/plans').then(r => { if (active) setCms(r.page?.content || {}) }).catch(() => {})
-    // Only logged-in users can be matched against a paid purchase, so guests
-    // simply see the normal "Buy Now" state.
-    if (getUser()) {
-      api('/payments/mine').then(d => {
-        if (!active || !Array.isArray(d.payments)) return
-        const byPlan = {}
-        d.payments.forEach(payment => {
-          if (payment.status !== 'paid' || !payment.plan?._id) return
-          const existing = byPlan[payment.plan._id]
-          if (!existing || new Date(payment.createdAt) > new Date(existing.createdAt)) byPlan[payment.plan._id] = payment
-        })
-        setPurchasedByPlan(byPlan)
-      }).catch(() => {})
+    function fetchPurchases() {
+      if (getUser()) {
+        api('/payments/mine').then(d => {
+          if (!active || !Array.isArray(d.payments)) return
+          const byPlan = {}
+          d.payments.forEach(payment => {
+            if (payment.status !== 'paid' || !payment.plan?._id) return
+            const existing = byPlan[payment.plan._id]
+            if (!existing || new Date(payment.createdAt) > new Date(existing.createdAt)) byPlan[payment.plan._id] = payment
+          })
+          setPurchasedByPlan(byPlan)
+        }).catch(() => {})
+      }
     }
-    return () => { active = false }
+    fetchPurchases()
+    window.addEventListener('courses-updated', fetchPurchases)
+    return () => {
+      active = false
+      window.removeEventListener('courses-updated', fetchPurchases)
+    }
   }, [])
 
   const training = plans.filter(p => p.category === 'training')

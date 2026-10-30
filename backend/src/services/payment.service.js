@@ -18,18 +18,18 @@ export class PaymentService {
    * Create Razorpay order and save pending Payment document
    */
   static async createOrder({ planId, name, email, phone, company, userId }) {
+
+    if (!userId) throw new AppError('Authentication required to purchase a plan', 401, 'UNAUTHORIZED')
     const plan = await Plan.findOne({ _id: planId, active: true })
     if (!plan) throw new AppError('Plan not found', 404, 'NOT_FOUND')
 
     const ownershipQuery = {
       plan: plan._id,
       status: 'paid',
-      $or: [
-        ...(userId ? [{ user: userId }] : []),
-        { email },
-      ],
+      user: userId,
     }
     const existing = await Payment.findOne(ownershipQuery)
+
     if (existing) throw new AppError('You have already purchased this plan', 409, 'ALREADY_PURCHASED')
 
     let order
@@ -48,7 +48,7 @@ export class PaymentService {
     }
 
     const payment = await Payment.create({
-      user: userId || undefined,
+      user: userId,
       plan: plan._id,
       name,
       email,
@@ -69,7 +69,7 @@ export class PaymentService {
   /**
    * Verify Razorpay payment signature and mark payment paid
    */
-  static async verifyPayment(razorpayOrderId, razorpayPaymentId, razorpaySignature) {
+  static async verifyPayment(razorpayOrderId, razorpayPaymentId, razorpaySignature, userId ) {
     if (!env.razorpayKeySecret) throw new AppError('Razorpay secret is not configured', 503, 'PAYMENTS_NOT_CONFIGURED')
 
     const expected = crypto
@@ -83,13 +83,15 @@ export class PaymentService {
     if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(expBuf, sigBuf)) {
       throw new AppError('Payment signature verification failed', 400, 'INVALID_SIGNATURE')
     }
+    const filter = { razorpayOrderId, status: 'created' }
+    if (userId) filter.user= userId;
 
     const payment = await Payment.findOneAndUpdate(
       { razorpayOrderId, status: 'created' },
       { razorpayPaymentId, status: 'paid', verifiedAt: new Date() },
       { new: true }
     ).populate('plan', 'name price billing duration features')
-
+    
     if (!payment) throw new AppError('Payment record not found for this order', 404, 'NOT_FOUND')
 
     return payment

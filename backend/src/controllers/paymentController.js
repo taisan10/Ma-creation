@@ -4,13 +4,14 @@ export async function createOrder(req, res) {
   const result = await PaymentService.createOrder({
     ...req.body,
     userId: req.user?.sub,
+    email: req.user?.email || req.body.email,
   })
   res.status(201).json({ success: true, ...result })
 }
 
 export async function verifyPayment(req, res) {
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body
-  const payment = await PaymentService.verifyPayment(razorpay_order_id, razorpay_payment_id, razorpay_signature)
+  const payment = await PaymentService.verifyPayment(razorpay_order_id, razorpay_payment_id, razorpay_signature, req.user.sub)
   res.json({ success: true, verified: true, payment })
 }
 

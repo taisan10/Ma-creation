@@ -1,0 +1,145 @@
+{
+  "project": {
+    "name": "MA Creation",
+    "description": "Full-stack Learning Management & DRM Protected Video Streaming Platform",
+    "version": "1.0.0",
+    "architecture": "Microservices & Asynchronous Worker Architecture"
+  },
+  "database": {
+    "engine": "MongoDB",
+    "odm": "Mongoose",
+    "models": {
+      "User": {
+        "collection": "users",
+        "description": "Student and Admin account profiles",
+        "fields": {
+          "_id": { "type": "ObjectId", "description": "Unique user ID" },
+          "name": { "type": "String", "required": true, "maxLength": 80 },
+          "email": { "type": "String", "required": true, "unique": true },
+          "phone": { "type": "String", "required": true },
+          "company": { "type": "String", "required": false },
+          "passwordHash": { "type": "String", "required": true, "select": false },
+          "role": { "type": "String", "enum": ["customer", "admin"], "default": "customer" },
+          "isActive": { "type": "Boolean", "default": true },
+          "playbackLocked": { "type": "Boolean", "default": false, "description": "Set true if screen recording is detected" },
+          "recordingStrikes": { "type": "Number", "default": 0 },
+          "createdAt": { "type": "Date" }
+        }
+      },
+      "Plan": {
+        "collection": "plans",
+        "description": "Pricing packages that gate course and service access",
+        "fields": {
+          "_id": { "type": "ObjectId" },
+          "name": { "type": "String", "required": true },
+          "price": { "type": "Number", "required": true },
+          "billing": { "type": "String", "example": "One-time" },
+          "duration": { "type": "String", "example": "Lifetime Access" },
+          "features": { "type": "[String]" },
+          "category": { "type": "String", "enum": ["service", "training"] },
+          "featured": { "type": "Boolean", "default": false },
+          "active": { "type": "Boolean", "default": true }
+        }
+      },
+      "Course": {
+        "collection": "courses",
+        "description": "Curriculum containing video lectures, tied to a Plan and Category",
+        "fields": {
+          "_id": { "type": "ObjectId" },
+          "title": { "type": "String", "required": true },
+          "description": { "type": "String" },
+          "category": { "type": "ObjectId", "ref": "Category" },
+          "plan": { "type": "ObjectId", "ref": "Plan", "description": "Users who paid for this plan gain access" },
+          "thumbnailUrl": { "type": "String" },
+          "order": { "type": "Number", "default": 0 },
+          "active": { "type": "Boolean", "default": true }
+        }
+      },
+      "Video": {
+        "collection": "videos",
+        "description": "Lecture videos stored in MinIO S3 and served via AES-128 HLS",
+        "fields": {
+          "_id": { "type": "ObjectId" },
+          "course": { "type": "ObjectId", "ref": "Course", "required": true },
+          "title": { "type": "String", "required": true },
+          "description": { "type": "String" },
+          "durationSeconds": { "type": "Number", "default": 0 },
+          "thumbnailUrl": { "type": "String" },
+          "order": { "type": "Number", "default": 0 },
+          "status": { "type": "String", "enum": ["UPLOADED", "PROCESSING", "READY", "FAILED"] },
+          "isHlsReady": { "type": "Boolean", "default": false },
+          "hlsDirectory": { "type": "String", "example": "courses/{courseId}/{videoId}/hls" },
+          "hlsManifestKey": { "type": "String", "example": "courses/{courseId}/{videoId}/hls/master.m3u8" },
+          "maxWatchMultiplier": { "type": "Number", "default": 2, "description": "Max watch limit = duration * multiplier" },
+          "encryptionKeyHex": { "type": "String", "select": false },
+          "encryptionIvHex": { "type": "String", "select": false }
+        }
+      },
+      "Payment": {
+        "collection": "payments",
+        "description": "Razorpay order transactions and entitlement records",
+        "fields": {
+          "_id": { "type": "ObjectId" },
+          "user": { "type": "ObjectId", "ref": "User" },
+          "plan": { "type": "ObjectId", "ref": "Plan", "required": true },
+          "amount": { "type": "Number", "required": true },
+          "status": { "type": "String", "enum": ["pending", "paid", "failed"], "default": "pending" },
+          "razorpayOrderId": { "type": "String", "unique": true },
+          "razorpayPaymentId": { "type": "String" },
+          "email": { "type": "String", "required": true },
+          "phone": { "type": "String" }
+        }
+      },
+      "RefreshToken": {
+        "collection": "refreshtokens",
+        "description": "Cryptographically hashed refresh tokens supporting multi-device login",
+        "fields": {
+          "_id": { "type": "ObjectId" },
+          "userId": { "type": "ObjectId", "ref": "User", "required": true },
+          "tokenHash": { "type": "String", "unique": true },
+          "sessionId": { "type": "String", "required": true },
+          "platform": { "type": "String", "enum": ["WEB", "MOBILE_IOS", "MOBILE_ANDROID"] },
+          "deviceLabel": { "type": "String" },
+          "isRevoked": { "type": "Boolean", "default": false },
+          "revokedReason": { "type": "String" },
+          "expiresAt": { "type": "Date" }
+        }
+      },
+      "WatchLog": {
+        "collection": "watchlogs",
+        "description": "Per-user watch duration counter for anti-abuse limits",
+        "fields": {
+          "user": { "type": "ObjectId", "ref": "User", "required": true },
+          "video": { "type": "ObjectId", "ref": "Video", "required": true },
+          "totalWatchedSeconds": { "type": "Number", "default": 0 }
+        }
+      }
+    }
+  },
+  "flows": {
+    "authenticationFlow": {
+      "step1": "Client sends POST /api/auth/login with { email, password } and header 'x-client-platform: MOBILE_ANDROID'.",
+      "step2": "Backend verifies password using Argon2, generates short-lived Access Token (15m JWT) and long-lived Refresh Token (7d).",
+      "step3": "Mobile receives both tokens directly in JSON. Store securely using flutter_secure_storage.",
+      "step4": "Client passes 'Authorization: Bearer <accessToken>' for all authenticated requests.",
+      "step5": "Upon receiving 401 Unauthorized, Client calls POST /api/auth/refresh with { refreshToken } to receive a new pair of tokens."
+    },
+    "coursePurchaseFlow": {
+      "step1": "Client lists available plans via GET /api/catalog/plans.",
+      "step2": "Client selects a plan and calls POST /api/payments/order with { planId, name, email, phone }.",
+      "step3": "Backend generates a Razorpay Order and returns { keyId, order: { id, amount } }.",
+      "step4": "Flutter app launches Razorpay Checkout SDK.",
+      "step5": "Upon success, Razorpay SDK returns { razorpay_order_id, razorpay_payment_id, razorpay_signature }.",
+      "step6": "Client sends verification payload to POST /api/payments/verify. Backend validates HMAC SHA256 signature and marks payment 'paid'.",
+      "step7": "User immediately gains access to all courses tied to this plan in GET /api/courses/mine."
+    },
+    "videoPlaybackAndDrmFlow": {
+      "step1": "Client requests video list via GET /api/courses/:courseId/videos.",
+      "step2": "Before playback, Client requests a token via POST /api/videos/:videoId/playback-token.",
+      "step3": "Backend verifies that User owns the course plan and has not exceeded max watch multiplier limit (e.g. 2x duration).",
+      "step4": "Backend creates PlaybackSession and returns { url: '/api/videos/:videoId/hls/manifest.m3u8', token, expiresAt }.",
+      "step5": "Client video player fetches manifest. Inside the manifest, player requests the AES-128 decryption key from GET /api/videos/:videoId/key (passing Bearer token).",
+      "step6": "During playback, Client sends heartbeat events every 15-30s to POST /api/videos/:videoId/watch-event with { token, watchedSeconds } to update server watch quotas."
+    }
+  }
+}
