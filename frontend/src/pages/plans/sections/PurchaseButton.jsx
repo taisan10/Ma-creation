@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import CheckoutInfoModal from '../../../components/CheckoutInfoModal'
 import { api, getUser } from '../../../lib/api'
 import { useTheme } from '../../../theme'
 
@@ -24,30 +23,34 @@ function restoreScroll() {
   document.documentElement.style.overflow = ''
 }
 
-
 export default function PurchaseButton({ planId, planName, alreadyPurchased = false, purchasedOn = null }) {
   const { theme } = useTheme()
   const navigate = useNavigate()
-  const [showModal, setShowModal] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [purchase, setPurchase] = useState(null)
   const [ownedNotice, setOwnedNotice] = useState(false)
 
-  async function proceed(contact) {
+  async function proceed(user) {
     if (busy) return
     setBusy(true)
     setError('')
+    setMessage('')
     let orderData
     try {
-      orderData = await api('/payments/order', { method: 'POST', body: JSON.stringify({ planId, ...contact }) })
+      orderData = await api('/payments/order', {
+        method: 'POST',
+        body: JSON.stringify({
+          planId,
+          name: user?.name,
+          email: user?.email,
+          phone: user?.phone,
+          company: user?.company,
+        }),
+      })
     } catch (e) {
-      // The server keeps the final say on whether this plan was already bought
-      // (client-side state can be stale), so surface that clearly instead of a
-      // generic error if that's what happened.
       if (e.code === 'ALREADY_PURCHASED') {
-        setShowModal(false)
         setOwnedNotice(true)
       } else {
         setError(e.message)
@@ -55,6 +58,7 @@ export default function PurchaseButton({ planId, planName, alreadyPurchased = fa
       setBusy(false)
       return
     }
+
     try {
       await loadRazorpay()
     } catch {
@@ -62,7 +66,11 @@ export default function PurchaseButton({ planId, planName, alreadyPurchased = fa
       setBusy(false)
       return
     }
-    setShowModal(false)
+
+    const prefillName = orderData.customer?.name || user?.name || ''
+    const prefillEmail = orderData.customer?.email || user?.email || ''
+    const prefillContact = orderData.customer?.phone || user?.phone || ''
+
     const rzp = new window.Razorpay({
       key: orderData.keyId,
       amount: orderData.order.amount,
@@ -70,11 +78,11 @@ export default function PurchaseButton({ planId, planName, alreadyPurchased = fa
       name: 'MA Creation',
       description: planName,
       order_id: orderData.order.id,
-      prefill: { name: contact.name, email: contact.email, contact: contact.phone },
+      prefill: { name: prefillName, email: prefillEmail, contact: prefillContact },
       theme: { color: theme.primary },
-          handler: async response => {
+      handler: async response => {
         try { rzp.close?.() } catch (_) {}
-        restoreScroll() // 👈 1. Scroll unlock karein
+        restoreScroll()
         try {
           const verified = await api('/payments/verify', { method: 'POST', body: JSON.stringify(response) })
           setPurchase(verified.payment)
@@ -97,7 +105,7 @@ export default function PurchaseButton({ planId, planName, alreadyPurchased = fa
       },
       modal: {
         ondismiss: () => {
-          restoreScroll() // 👈 2. User cancel kare tab bhi scroll unlock karein
+          restoreScroll()
           api('/payments/failed', { method: 'POST', body: JSON.stringify({ razorpay_order_id: orderData.order.id }) }).catch(() => {})
           setMessage('Checkout was closed before payment completed. Our team can follow up with you.')
           setBusy(false)
@@ -105,26 +113,26 @@ export default function PurchaseButton({ planId, planName, alreadyPurchased = fa
       }
     })
     rzp.on('payment.failed', () => { 
-      restoreScroll() // 👈 3. Payment fail hone par bhi unlock karein
-      api('/payments/failed', { method: 'POST', body: JSON.stringify({ razorpay_order_id: orderData.order.id }) }).catch(() => {}); 
+      restoreScroll()
+      api('/payments/failed', { method: 'POST', body: JSON.stringify({ razorpay_order_id: orderData.order.id }) }).catch(() => {})
       setBusy(false) 
     })
     rzp.open()
-
   }
 
   function handleBuyClick() {
     setError('')
+    setMessage('')
     if (alreadyPurchased) {
       setOwnedNotice(true)
       return
     }
     const user = getUser()
-    if(!user){
-      navigate('/login',{state: {from: '/plans'}})
+    if (!user) {
+      navigate('/login', { state: { from: '/plans' } })
       return
     }
-    setShowModal(true)
+    proceed(user)
   }
 
   if (alreadyPurchased) {
@@ -149,6 +157,7 @@ export default function PurchaseButton({ planId, planName, alreadyPurchased = fa
   return (
     <div>
       <button onClick={handleBuyClick} disabled={busy} className="btn-gold btn-sm w-full">{busy ? 'Preparing…' : 'Buy Now'}</button>
+      {error && <div className="mt-2 text-xs text-rust font-medium">{error}</div>}
       {ownedNotice && (
         <div className="mt-3 rounded-lg border border-teal/20 bg-teal/5 p-3 text-xs text-ink/70">
           Looks like you've already purchased {planName} ({money(purchase?.amount)} paid). No need to buy it again.
@@ -168,7 +177,6 @@ export default function PurchaseButton({ planId, planName, alreadyPurchased = fa
           )}
         </div>
       )}
-      {showModal && <CheckoutInfoModal planName={planName} submitting={busy} errorMessage={error} onCancel={() => setShowModal(false)} onSubmit={proceed} />}
     </div>
   )
 }

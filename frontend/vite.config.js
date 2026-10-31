@@ -7,13 +7,20 @@ export default defineConfig({
   server: {
     // production se pahle in dono line ko remove krna host ki 
     host: true,
-    allowedHosts: ['.pinggy.net', '.pinggy-free.link', '.trycloudflare.com', 'jpcac-103-111-7-25.free.pinggy.net'],
+    // allowedHosts: ['.pinggy.net', '.pinggy-free.link', '.trycloudflare.com', 'jpcac-103-111-7-25.free.pinggy.net'],
     strictPort: true,
     proxy: {
       '/api': {
         target: 'http://localhost',
         changeOrigin: true,
         secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            if (err?.code !== 'ECONNRESET') {
+              console.warn('[vite proxy warning]:', err.message)
+            }
+          })
+        },
       },
     },
   },

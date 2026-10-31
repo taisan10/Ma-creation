@@ -75,6 +75,7 @@ export async function refresh(req, res) {
     return res.json({ success: true, token: accessToken, accessToken, refreshToken, user })
   } catch (err) {
     clearRefreshCookie(res)
+    if (err instanceof AppError) throw err
     throw new AppError(err.message || 'Token refresh failed', 401, 'UNAUTHORIZED')
   }
 }

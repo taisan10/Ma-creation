@@ -4,6 +4,7 @@ import User from '../models/User.js'
 import Payment from '../models/Payment.js'
 import RefreshToken from '../models/RefreshToken.js'
 import AccessTokenSession from '../models/AccessTokenSession.js'
+import PlaybackSession from '../models/PlaybackSession.js'
 import { hashPassword, verifyPassword, DUMMY_ARGON2_HASH } from '../utils/password.util.js'
 import { generateRefreshToken, hashToken, parseDurationToMs } from '../utils/token.util.js'
 import { AppError } from '../utils/AppError.js'
@@ -125,6 +126,8 @@ export class AuthService {
         id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
+        company: user.company,
         role: user.role,
       },
     }
@@ -149,6 +152,9 @@ export class AuthService {
     }
 
     if (existingToken.isRevoked) {
+      if (existingToken.revokedReason === 'REPLACED_SESSION') {
+        throw new AppError('Your account has been logged in from another device. Please log in again.', 401, 'SESSION_REPLACED')
+      }
       // Automatic Breach Containment: Invalidate all sessions of this user
       await RefreshToken.updateMany(
         { userId: existingToken.userId, sessionId: existingToken.sessionId },
@@ -216,6 +222,19 @@ export class AuthService {
       { $set: { isRevoked: true, revokedReason: 'LOGOUT_ALL', revokedAt: new Date() } }
     )
     await AccessTokenSession.deleteMany({ userId })
+    await PlaybackSession.deleteMany({ user: userId })
+  }
+
+  /**
+   * Enforce Single Device Login: Revoke all existing sessions for this user on other devices.
+   */
+  static async terminatePreviousSessions(userId, reason = 'REPLACED_SESSION') {
+    await RefreshToken.updateMany(
+      { userId, isRevoked: false },
+      { $set: { isRevoked: true, revokedReason: reason, revokedAt: new Date() } }
+    )
+    await AccessTokenSession.deleteMany({ userId })
+    await PlaybackSession.deleteMany({ user: userId })
   }
 
   /**
@@ -260,6 +279,12 @@ export class AuthService {
       { $set: { user: user._id } }
     )
 
+    // Single Device Login enforcement:
+    // When a student ('customer') logs in, terminate previous active sessions on other devices
+    if (user.role === 'customer') {
+      await this.terminatePreviousSessions(user._id, 'REPLACED_SESSION')
+    }
+
     return await this.issueTokens(user, context)
   }
 
@@ -281,6 +306,12 @@ export class AuthService {
       { $or: [{ user: { $exists: false }, email: user.email }, { user: null, email: user.email }], status: 'paid' },
       { $set: { user: user._id } }
     )
+
+    // Single Device Login enforcement:
+    // When a student ('customer') logs in, terminate previous active sessions on other devices
+    if (user.role === 'customer') {
+      await this.terminatePreviousSessions(user._id, 'REPLACED_SESSION')
+    }
 
     return await this.issueTokens(user, context)
   }

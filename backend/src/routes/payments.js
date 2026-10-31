@@ -2,22 +2,22 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { validate } from '../middleware/validate.js'
-import { authenticate, optionalAuthenticate } from '../middleware/auth.js'
+import { authenticate } from '../middleware/auth.js'
 import * as c from '../controllers/paymentController.js'
 
 const router = Router()
 
 const orderSchema = z.object({
   planId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid plan ID'),
-  name: z.string().min(2, 'Name is required').max(80),
-  email: z.string().email('A valid email is required'),
-  phone: z.string().min(8, 'A valid phone number is required').max(20),
+  name: z.string().min(2).max(80).optional(),
+  email: z.string().email().optional(),
+  phone: z.string().max(20).optional(),
   company: z.string().max(120).optional()
 })
 
-// No `authenticate` requirement any more -- checkout works for guests.
-// `optionalAuthenticate` still attaches req.user when a valid token is sent,
-// so a logged-in customer's payment stays linked to their account too.
+// All payment endpoints require an authenticated user session
+
+
 router.post('/order', authenticate, validate(orderSchema), asyncHandler(c.createOrder))
 router.post('/verify', authenticate, validate(z.object({
   razorpay_order_id: z.string(),

@@ -90,9 +90,19 @@ export class CourseService {
     const courseExists = await Course.exists({ _id: course })
     if (!courseExists) throw new AppError('Course does not exist', 404, 'COURSE_NOT_FOUND')
 
+    const cleanTitle = title.trim()
+    const escaped = cleanTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const existingVideo = await Video.findOne({
+      course,
+      title: { $regex: new RegExp(`^${escaped}$`, 'i') },
+    })
+    if (existingVideo) {
+      throw new AppError(`A video with title "${cleanTitle}" already exists in this course`, 409, 'DUPLICATE_TITLE')
+    }
+
     return await Video.create({
       course,
-      title,
+      title: cleanTitle,
       description,
       order,
       durationSeconds,

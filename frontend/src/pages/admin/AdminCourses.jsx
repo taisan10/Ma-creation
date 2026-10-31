@@ -72,7 +72,7 @@ export default function AdminCourses() {
       } catch (_) {
         // Silent fail on background poll
       }
-    }, 2500)
+    }, 4000)
 
     return () => clearInterval(timer)
   }, [activeUpload?.id, activeUpload?.status, activeUpload?.courseId])
@@ -786,33 +786,50 @@ function VideosSection({
     }
   }, [selectedCourseId])
 
-  // 2. Dedicated Live Transcoding Poller (Runs every 2s only while an active transcoding job exists)
-  useEffect(() => {
-    if (!selectedCourseId) return
-
-    const hasActiveTranscode = videos.some(
+  // 2. Dedicated Live Transcoding Poller (Runs every 4s only while an active transcoding job exists)
+  const hasActiveTranscode = useMemo(() => {
+    return videos.some(
       (v) =>
         v.status === 'PENDING' ||
         v.status === 'UPLOADING' ||
         v.status === 'QUEUED' ||
         v.status === 'PROCESSING'
     )
+  }, [videos])
 
-    if (!hasActiveTranscode) return
+  useEffect(() => {
+    if (!selectedCourseId || !hasActiveTranscode) return
 
+    let isMounted = true
     const timer = setInterval(async () => {
       try {
         const res = await api(`/admin/lms/videos?courseId=${selectedCourseId}`)
-        if (res?.videos) {
-          setVideos(res.videos)
+        if (res?.videos && isMounted) {
+          setVideos((prev) => {
+            const hasChanges =
+              res.videos.length !== prev.length ||
+              res.videos.some((nv, idx) => {
+                const pv = prev[idx]
+                return (
+                  !pv ||
+                  pv._id !== nv._id ||
+                  pv.status !== nv.status ||
+                  pv.processingProgress !== nv.processingProgress
+                )
+              })
+            return hasChanges ? res.videos : prev
+          })
         }
-      } catch (err) {
+      } catch (_) {
         // Silent fail on background poll
       }
-    }, 2000)
+    }, 4000)
 
-    return () => clearInterval(timer)
-  }, [selectedCourseId, videos])
+    return () => {
+      isMounted = false
+      clearInterval(timer)
+    }
+  }, [selectedCourseId, hasActiveTranscode])
 
   function handleFileChange(e) {
     const selectedFile = e.target.files?.[0] || null
@@ -844,6 +861,18 @@ function VideosSection({
     setMessage('')
     if (!selectedCourseId) return setError('Please choose a course first.')
     if (!file) return setError('Please choose a video file to upload.')
+
+    const cleanTitle = title.trim()
+    if (!cleanTitle) return setError('Please enter a video lesson title.')
+
+    // 🛡️ Prevent duplicate video titles in the same course (0ms In-Memory check)
+    const isDuplicate = videos.some(
+      (v) => v.title?.trim().toLowerCase() === cleanTitle.toLowerCase()
+    )
+    if (isDuplicate) {
+      return setError(`A video lesson with title "${cleanTitle}" already exists in this course. Please choose a unique title.`)
+    }
+
     const fileExt = '.' + file.name.split('.').pop().toLowerCase()
     const allowedExts = ['.mp4', '.webm', '.mov', '.mkv']
     if (!allowedExts.includes(fileExt)) {
@@ -867,7 +896,7 @@ function VideosSection({
         method: 'POST',
         body: JSON.stringify({
           course: selectedCourseId,
-          title,
+          title: cleanTitle,
           description,
           durationSeconds: detectedDuration,
         }),
@@ -878,7 +907,7 @@ function VideosSection({
       setActiveUpload({
         id: videoId,
         courseId: selectedCourseId,
-        title: title || file.name,
+        title: cleanTitle || file.name,
         fileName: file.name,
         fileSizeFormatted: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
         status: 'UPLOADING',

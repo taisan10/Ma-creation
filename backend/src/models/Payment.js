@@ -1,11 +1,8 @@
 import mongoose from 'mongoose'
 const schema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  plan: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan' },
-  // Mandatory contact details captured on the "Buy Now" form before the
-  // Razorpay checkout opens. Kept on the Payment record itself so admins can
-  // follow up even when the buyer isn't a logged-in / registered user, and
-  // even if they abandon checkout before paying.
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  plan: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan', required: true, index: true },
+  // Verified contact details from the authenticated user.
   name: { type: String, required: true, trim: true, maxLength: 80 },
   email: { type: String, required: true, trim: true, lowercase: true },
   phone: { type: String, required: true, trim: true },

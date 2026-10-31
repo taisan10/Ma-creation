@@ -29,6 +29,15 @@ export default function Login() {
   const location=useLocation()
 const from = location.state?.from || '/'
   const navigate = useNavigate();
+  const [notice, setNotice] = useState(() => {
+    if (typeof window === 'undefined') return ''
+    const msg = sessionStorage.getItem('auth_notice')
+    if (msg) {
+      sessionStorage.removeItem('auth_notice')
+      return msg
+    }
+    return ''
+  });
   const [login, setLogin] = useState({ email: "", password: "" });
   const [register, setRegister] = useState({
     name: "",
@@ -41,6 +50,7 @@ const from = location.state?.from || '/'
   async function submit(e) {
     e.preventDefault();
     setError("");
+    setNotice("");
     setLoading(true);
     try {
       const data = await api(
@@ -95,6 +105,22 @@ navigate(target, { replace: true })
     🔒 Please log in or create an account to proceed with your plan purchase.
   </div>
 )}
+            {notice && (
+              <div className="mb-6 rounded-[8px] border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-900 font-medium flex items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">⚠️</span>
+                  <span>{notice}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setNotice("")}
+                  className="text-amber-900/60 hover:text-amber-900 text-sm font-bold ml-2 p-1"
+                  aria-label="Dismiss notice"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
             <div className="flex gap-1 bg-paper2 rounded p-1 mb-8">
               <button
                 type="button"
@@ -105,7 +131,10 @@ navigate(target, { replace: true })
               </button>
               <button
                 type="button"
-                onClick={() => setTab("register")}
+                onClick={() => {
+                  setTab("register");
+                  setNotice("");
+                }}
                 className={`flex-1 py-2.5 rounded text-sm font-semibold ${tab === "register" ? "bg-card shadow-sm text-ink" : "text-ink/60"}`}
               >
                 Register
@@ -144,7 +173,10 @@ navigate(target, { replace: true })
                   New to MA Creation?{" "}
                   <button
                     className="text-gold2 underline"
-                    onClick={() => setTab("register")}
+                    onClick={() => {
+                  setTab("register");
+                  setNotice("");
+                }}
                   >
                     Create an account
                   </button>

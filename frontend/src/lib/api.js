@@ -26,7 +26,15 @@ async function tryRefreshToken() {
           },
           credentials: 'include' // 🍪 HttpOnly cookie bhejne ke liye
         })
-        if (!res.ok) return null
+        if (!res.ok) {
+          try {
+            const errData = await res.json()
+            if (errData?.code === 'SESSION_REPLACED' || errData?.message?.includes('another device')) {
+              sessionStorage.setItem('auth_notice', 'Aapka account kisi doosre device me login hua hai. Is device se logout kar diya gaya hai.')
+            }
+          } catch {}
+          return null
+        }
         const data = await res.json()
         if (data?.token) {
           localStorage.setItem('mac_token', data.token)
@@ -81,6 +89,9 @@ export async function api(path, options = {}) {
     if (response.status === 401) {
       // Agar request khud login/register/refresh ki thi, toh infinite loop se bachein
       if (path.startsWith('/auth/login') || path.startsWith('/auth/register') || path.startsWith('/auth/refresh')) {
+        if (data?.code === 'SESSION_REPLACED' || data?.message?.includes('another device')) {
+          sessionStorage.setItem('auth_notice', 'Aapka account kisi doosre device me login hua hai. Is device se logout kar diya gaya hai.')
+        }
         clearSession()
         if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
           window.location.href = '/login'
