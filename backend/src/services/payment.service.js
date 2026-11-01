@@ -18,10 +18,15 @@ export class PaymentService {
    * Create Razorpay order and save pending Payment document
    */
   static async createOrder({ planId, name, email, phone, company, userId }) {
-
     if (!userId) throw new AppError('Authentication required to purchase a plan', 401, 'UNAUTHORIZED')
     const plan = await Plan.findOne({ _id: planId, active: true })
     if (!plan) throw new AppError('Plan not found', 404, 'NOT_FOUND')
+
+    const dbUser = await User.findById(userId)
+    const finalName = name || dbUser?.name || 'Customer'
+    const finalEmail = email || dbUser?.email || ''
+    const finalPhone = phone || dbUser?.phone || ''
+    const finalCompany = company || dbUser?.company || ''
 
     const ownershipQuery = {
       plan: plan._id,
@@ -38,7 +43,7 @@ export class PaymentService {
         amount: Math.round(plan.price * 100),
         currency: 'INR',
         receipt: `mac_${Date.now()}`,
-        notes: { planId: plan._id.toString(), userId: userId || 'guest', email },
+        notes: { planId: plan._id.toString(), userId: userId.toString(), email: finalEmail },
       })
     } catch (err) {
       if (err?.statusCode === 400 && err?.error?.code === 'DUPLICATE_ORDER') {
@@ -50,10 +55,10 @@ export class PaymentService {
     const payment = await Payment.create({
       user: userId,
       plan: plan._id,
-      name,
-      email,
-      phone,
-      company,
+      name: finalName,
+      email: finalEmail,
+      phone: finalPhone,
+      company: finalCompany,
       razorpayOrderId: order.id,
       amount: plan.price,
     })
@@ -62,6 +67,11 @@ export class PaymentService {
       keyId: env.razorpayKeyId,
       order,
       paymentId: payment._id,
+      customer: {
+        name: finalName,
+        email: finalEmail,
+        phone: finalPhone,
+      },
       plan: { id: plan._id, name: plan.name, price: plan.price },
     }
   }
@@ -69,7 +79,7 @@ export class PaymentService {
   /**
    * Verify Razorpay payment signature and mark payment paid
    */
-  static async verifyPayment(razorpayOrderId, razorpayPaymentId, razorpaySignature, userId ) {
+  static async verifyPayment(razorpayOrderId, razorpayPaymentId, razorpaySignature, userId) {
     if (!env.razorpayKeySecret) throw new AppError('Razorpay secret is not configured', 503, 'PAYMENTS_NOT_CONFIGURED')
 
     const expected = crypto
@@ -83,15 +93,13 @@ export class PaymentService {
     if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(expBuf, sigBuf)) {
       throw new AppError('Payment signature verification failed', 400, 'INVALID_SIGNATURE')
     }
-    const filter = { razorpayOrderId, status: 'created' }
-    if (userId) filter.user= userId;
 
     const payment = await Payment.findOneAndUpdate(
-      { razorpayOrderId, status: 'created' },
+      { razorpayOrderId, user: userId, status: 'created' },
       { razorpayPaymentId, status: 'paid', verifiedAt: new Date() },
       { new: true }
     ).populate('plan', 'name price billing duration features')
-    
+
     if (!payment) throw new AppError('Payment record not found for this order', 404, 'NOT_FOUND')
 
     return payment
@@ -109,25 +117,19 @@ export class PaymentService {
   }
 
   /**
-   * Fetch customer payment history with guest linking
+   * Fetch customer payment history
    */
   static async getUserPayments(userId) {
     const user = await User.findById(userId).select('email name phone company')
     if (!user) throw new AppError('User not found', 404, 'NOT_FOUND')
 
     const payments = await Payment.find({
+      user: user._id,
       status: 'paid',
-      $or: [{ user: user._id }, { user: { $exists: false }, email: user.email }, { user: null, email: user.email }],
     })
       .populate('plan', 'name price billing duration features category')
       .sort({ createdAt: -1 })
       .limit(100)
-
-    const unlinked = payments.filter(p => !p.user)
-    if (unlinked.length) {
-      await Payment.updateMany({ _id: { $in: unlinked.map(p => p._id) } }, { $set: { user: user._id } })
-      unlinked.forEach(p => { p.user = user._id })
-    }
 
     return { payments, user }
   }

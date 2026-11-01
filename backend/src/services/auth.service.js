@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import jwt from 'jsonwebtoken'
 import User from '../models/User.js'
-import Payment from '../models/Payment.js'
 import RefreshToken from '../models/RefreshToken.js'
 import AccessTokenSession from '../models/AccessTokenSession.js'
 import PlaybackSession from '../models/PlaybackSession.js'
@@ -257,7 +256,7 @@ export class AuthService {
 
   /**
    * Complete Registration Flow:
-   * Validates duplicate email, hashes password with Argon2id, links guest payments, issues tokens.
+   * Validates duplicate email, hashes password with Argon2id, issues tokens.
    */
   static async registerUser(data, context = {}) {
     const normalizedEmail = (data.email || '').toLowerCase().trim()
@@ -273,11 +272,7 @@ export class AuthService {
       passwordHash,
     })
 
-    // Link guest payments
-    await Payment.updateMany(
-      { $or: [{ user: { $exists: false }, email: user.email }, { user: null, email: user.email }], status: 'paid' },
-      { $set: { user: user._id } }
-    )
+
 
     // Single Device Login enforcement:
     // When a student ('customer') logs in, terminate previous active sessions on other devices
@@ -290,7 +285,7 @@ export class AuthService {
 
   /**
    * Complete Login Flow:
-   * Validates credentials (with anti-timing & lockout), links guest payments, issues tokens.
+   * Validates credentials (with anti-timing & lockout), issues tokens.
    */
   static async loginUser(email, password, context = {}) {
     let user
@@ -301,11 +296,7 @@ export class AuthService {
       throw new AppError(err.message || 'Invalid email or password', 401, 'INVALID_CREDENTIALS')
     }
 
-    // Link guest payments
-    await Payment.updateMany(
-      { $or: [{ user: { $exists: false }, email: user.email }, { user: null, email: user.email }], status: 'paid' },
-      { $set: { user: user._id } }
-    )
+
 
     // Single Device Login enforcement:
     // When a student ('customer') logs in, terminate previous active sessions on other devices
