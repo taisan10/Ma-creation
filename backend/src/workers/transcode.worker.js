@@ -6,7 +6,7 @@ import { connectDB, disconnectDB } from "../config/db.js";
 import { redisOptions } from "../config/redis.js";
 import { VIDEO_TRANSCODE_QUEUE } from "../queues/video.queue.js";
 import { TranscodeService } from "../services/transcode.service.js";
-import Video from "../models/Video.js";
+import Video from "../models/LMS/Video.js";
 
 async function processTranscodeJob(job) {
   const { videoId, rawFilePath } = job.data;

@@ -6,7 +6,9 @@ const schema = new mongoose.Schema({
   filename: { type: String, required: true, trim: true, maxLength: 255 },
   mimeType: { type: String, required: true, default: 'application/pdf' },
   size: { type: Number, required: true, min: 1 },
-  fileId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+  fileKey: { type: String, trim: true }, // MinIO S3 Object Key
+  fileId: { type: mongoose.Schema.Types.ObjectId, index: true }, // Legacy GridFS fallback
+  storage: { type: String, enum: ['minio', 'gridfs'], default: 'minio' },
   coverImageUrl: { type: String, trim: true, default: '/assets/gem-book-cover.png' },
   active: { type: Boolean, default: true, index: true },
   downloads: { type: Number, default: 0, min: 0 },

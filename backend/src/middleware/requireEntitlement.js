@@ -1,7 +1,7 @@
 import { AppError } from '../utils/AppError.js'
-import Course from '../models/Course.js'
-import Payment from '../models/Payment.js'
-import Video from '../models/Video.js'
+import Course from '../models/LMS/Course.js'
+import Payment from '../models/LMS/Payment.js'
+import Video from '../models/LMS/Video.js'
 
 
 export async function requireCourseEntitlement(req, res, next) {

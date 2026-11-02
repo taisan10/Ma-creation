@@ -1,6 +1,6 @@
 import mongoose from 'mongoose'
 import { connectDB } from '../config/db.js'
-import Video from '../models/Video.js'
+import Video from '../models/LMS/Video.js'
 import { HlsService } from '../services/hls.service.js'
 
 async function transcodeAll() {

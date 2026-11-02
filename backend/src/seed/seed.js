@@ -1,12 +1,12 @@
 import mongoose from "mongoose";
 import { connectDB } from "../config/db.js";
 import { env } from "../config/env.js";
-import User from "../models/User.js";
-import Service from "../models/Service.js";
-import Plan from "../models/Plan.js";
-import Page from "../models/Page.js";
-import FAQ from "../models/FAQ.js";
-import SiteSettings from "../models/SiteSettings.js";
+import User from "../models/AUTH/User.js";
+import Service from "../models/CMS/Service.js";
+import Plan from "../models/CMS/Plan.js";
+import Page from "../models/CMS/Page.js";
+import FAQ from "../models/CMS/FAQ.js";
+import SiteSettings from "../models/CMS/SiteSettings.js";
 import { hashPassword } from "../utils/password.util.js";
 
 const services = [

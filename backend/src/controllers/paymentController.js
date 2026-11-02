@@ -16,7 +16,8 @@ export async function verifyPayment(req, res) {
 }
 
 export async function markFailed(req, res) {
-  await PaymentService.markPaymentFailed(req.body.razorpay_order_id)
+   // req.user.sub pass kiya taaki confirm ho ki kaun fail kar raha hai real user ya koi fake anauthorized user 
+  await PaymentService.markPaymentFailed(req.body.razorpay_order_id, req.user?.sub)
   res.json({ success: true })
 }
 

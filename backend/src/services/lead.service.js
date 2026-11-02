@@ -1,4 +1,4 @@
-import Lead from '../models/Lead.js'
+import Lead from '../models/CMS/Lead.js'
 
 export class LeadService {
   /**

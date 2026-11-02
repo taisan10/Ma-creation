@@ -6,10 +6,10 @@ export async function getPublicBook(req, res) {
 }
 
 async function streamBook(req, res, mode) {
-  const { book, file, fileId, bucket } = await BookService.getBookForStream(req.params.id)
+  const { book, stream } = await BookService.getBookForStream(req.params.id)
 
-  res.setHeader('Content-Type', book.mimeType || file.contentType || 'application/pdf')
-  res.setHeader('Content-Length', String(book.size || file.length))
+  res.setHeader('Content-Type', book.mimeType || 'application/pdf')
+  res.setHeader('Content-Length', String(book.size))
   res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400')
   res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader(
@@ -19,10 +19,8 @@ async function streamBook(req, res, mode) {
       : `inline; filename="${cleanFilename(book.filename).replace(/"/g, '')}"; filename*=UTF-8''${encodeURIComponent(cleanFilename(book.filename))}`
   )
 
-  const stream = bucket.openDownloadStream(fileId)
-
   if (mode === 'download') {
-    stream.on('finish', () => {
+    res.on('finish', () => {
       BookService.incrementDownloads(book._id)
     })
   }
@@ -31,6 +29,7 @@ async function streamBook(req, res, mode) {
     if (!res.headersSent) res.status(500).json({ success: false, message: 'Unable to read the book file' })
     else res.destroy(error)
   })
+
   stream.pipe(res)
 }
 

@@ -2,11 +2,12 @@ import { randomUUID, createHmac } from 'crypto'
 import { AppError } from '../utils/AppError.js'
 import { env } from '../config/env.js'
 import { minioPublicClient, VIDEO_BUCKET } from '../config/minio.js'
-import WatchLog from '../models/WatchLog.js'
-import PlaybackSession from '../models/PlaybackSession.js'
-import Video from '../models/Video.js'
-import User from '../models/User.js'
-import SecurityIncident from '../models/SecurityIncident.js'
+import WatchLog from '../models/LMS/WatchLog.js'
+import PlaybackSession from '../models/LMS/PlaybackSession.js'
+import Video from '../models/LMS/Video.js'
+import User from '../models/AUTH/User.js'
+import SecurityIncident from '../models/AUTH/SecurityIncident.js'
+
 
 export class VideoService {
 

@@ -1,5 +1,5 @@
-import Service from '../models/Service.js'
-import Plan from '../models/Plan.js'
+import Service from '../models/CMS/Service.js'
+import Plan from '../models/CMS/Plan.js'
 
 export class CatalogService {
   /**

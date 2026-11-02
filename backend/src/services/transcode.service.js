@@ -2,7 +2,7 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { spawn } from "child_process";
-import Video from "../models/Video.js";
+import Video from "../models/LMS/Video.js";
 import { minioClient, VIDEO_BUCKET } from "../config/minio.js";
 
 

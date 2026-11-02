@@ -1,11 +1,13 @@
 import mongoose from 'mongoose'
-import Book from '../models/Book.js'
+import Book from '../models/LMS/Book.js'
+import { minioClient, VIDEO_BUCKET } from '../config/minio.js'
 import { AppError } from '../utils/AppError.js'
 
 const MAX_BOOK_BYTES = 50 * 1024 * 1024
 const DEFAULT_COVER = '/assets/gem-book-cover.png'
 
-export function getBucket() {
+// Legacy GridFS helper (only used as fallback for existing old books)
+export function getGridFSBucket() {
   if (mongoose.connection.readyState !== 1 || !mongoose.connection.db) {
     throw new AppError('Database is not connected', 503, 'DATABASE_UNAVAILABLE')
   }
@@ -20,16 +22,6 @@ export function contentDispositionFilename(value) {
   const filename = cleanFilename(value)
   const fallback = filename.replace(/[^a-zA-Z0-9._ -]/g, '_') || 'gem-guide.pdf'
   return `attachment; filename="${fallback.replace(/"/g, '')}"; filename*=UTF-8''${encodeURIComponent(filename)}`
-}
-
-function uploadBuffer(buffer, filename, contentType, metadata) {
-  return new Promise((resolve, reject) => {
-    const bucket = getBucket()
-    const upload = bucket.openUploadStream(filename, { contentType, metadata })
-    upload.on('error', reject)
-    upload.on('finish', () => resolve(upload.id))
-    upload.end(buffer)
-  })
 }
 
 export class BookService {
@@ -47,18 +39,35 @@ export class BookService {
   }
 
   /**
-   * Fetch active book and verify GridFS file exists for streaming
+   * Fetch active book and return a readable stream for streaming or download.
+   * Supports both MinIO S3 object storage (new) and GridFS (legacy fallback).
    */
   static async getBookForStream(id) {
     const book = await Book.findOne({ _id: id, active: true })
     if (!book) throw new AppError('Book not found', 404, 'NOT_FOUND')
 
-    const bucket = getBucket()
-    const fileId = new mongoose.Types.ObjectId(book.fileId)
-    const files = await bucket.find({ _id: fileId }).toArray()
-    if (!files.length) throw new AppError('Book file is unavailable', 404, 'FILE_NOT_FOUND')
+    // 1. MinIO S3 Storage (Primary)
+    if (book.fileKey) {
+      try {
+        const stream = await minioClient.getObject(VIDEO_BUCKET, book.fileKey)
+        return { book, stream }
+      } catch (err) {
+        console.error('[MinIO Book Stream Error]', err)
+        throw new AppError('Book file is unavailable from storage', 404, 'FILE_NOT_FOUND')
+      }
+    }
 
-    return { book, file: files[0], fileId, bucket }
+    // 2. Legacy GridFS fallback
+    if (book.fileId) {
+      const bucket = getGridFSBucket()
+      const fileId = new mongoose.Types.ObjectId(book.fileId)
+      const files = await bucket.find({ _id: fileId }).toArray()
+      if (!files.length) throw new AppError('Book file is unavailable', 404, 'FILE_NOT_FOUND')
+      const stream = bucket.openDownloadStream(fileId)
+      return { book, stream }
+    }
+
+    throw new AppError('Book file record is invalid', 404, 'FILE_NOT_FOUND')
   }
 
   static async incrementDownloads(bookId) {
@@ -73,34 +82,34 @@ export class BookService {
   }
 
   /**
-   * Upload and create a new book
+   * Create a new book from MinIO upload stream
    */
   static async createBook(file, body, uploadedBy) {
-    if (!file?.buffer?.length) throw new AppError('Please choose a PDF book file.', 400, 'BOOK_FILE_REQUIRED')
-    if (file.size > MAX_BOOK_BYTES) throw new AppError('Book file is too large. Maximum size is 50 MB.', 413, 'BOOK_TOO_LARGE')
-
-    const mimeType = String(file.mimetype || '').split(';')[0].toLowerCase()
-    const looksLikePdf = file.buffer.subarray(0, 5).toString('ascii') === '%PDF-'
-    if (mimeType !== 'application/pdf' || !looksLikePdf) {
-      throw new AppError('Only valid PDF books are supported', 415, 'INVALID_BOOK_TYPE')
+    if (!file?.fileKey) {
+      throw new AppError('Please choose a PDF book file.', 400, 'BOOK_FILE_REQUIRED')
+    }
+    if (file.size > MAX_BOOK_BYTES) {
+      throw new AppError('Book file is too large. Maximum size is 50 MB.', 413, 'BOOK_TOO_LARGE')
     }
 
     const title = String(body?.title || '').trim()
-    if (!title || title.length > 180) throw new AppError('A valid book title is required', 400, 'BOOK_TITLE_REQUIRED')
+    if (!title || title.length > 180) {
+      throw new AppError('A valid book title is required', 400, 'BOOK_TITLE_REQUIRED')
+    }
 
-    const filename = cleanFilename(body?.filename || file.originalname || 'gem-guide.pdf')
+    const filename = cleanFilename(body?.filename || file.filename || 'gem-guide.pdf')
     const description = String(body?.description || '').trim().slice(0, 2000)
     const coverImageUrl = String(body?.coverImageUrl || DEFAULT_COVER).trim() || DEFAULT_COVER
     const active = String(body?.active ?? 'true') !== 'false'
 
-    const fileId = await uploadBuffer(file.buffer, filename, 'application/pdf', { title, uploadedBy })
     return await Book.create({
       title,
       description,
       filename,
-      mimeType: 'application/pdf',
+      mimeType: file.mimeType || 'application/pdf',
       size: file.size,
-      fileId,
+      fileKey: file.fileKey,
+      storage: 'minio',
       coverImageUrl,
       active,
       uploadedBy,
@@ -123,16 +132,20 @@ export class BookService {
   }
 
   /**
-   * Delete book document and corresponding GridFS file
+   * Delete book document and clean up MinIO S3 object (or legacy GridFS)
    */
   static async deleteBook(id) {
     const book = await Book.findById(id)
     if (!book) throw new AppError('Book not found', 404, 'NOT_FOUND')
 
-    try {
-      await getBucket().delete(new mongoose.Types.ObjectId(book.fileId))
-    } catch {
-      // GridFS file may already be deleted
+    if (book.fileKey) {
+      await minioClient.removeObject(VIDEO_BUCKET, book.fileKey).catch(() => {})
+    } else if (book.fileId) {
+      try {
+        await getGridFSBucket().delete(new mongoose.Types.ObjectId(book.fileId))
+      } catch {
+        // file may already be deleted
+      }
     }
 
     await book.deleteOne()

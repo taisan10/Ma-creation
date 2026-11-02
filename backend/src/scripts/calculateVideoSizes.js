@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 import { connectDB } from '../config/db.js'
-import Video from '../models/Video.js'
-import Course from '../models/Course.js'
+import Video from '../models/LMS/Video.js'
+import Course from '../models/LMS/Course.js'
 import { Client as MinioClient } from 'minio'
 
 const minio = new MinioClient({

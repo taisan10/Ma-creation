@@ -4,7 +4,7 @@ import os from 'os'
 import { spawn } from 'child_process'
 import { minioClient, VIDEO_BUCKET } from '../config/minio.js'
 import { VideoService } from './video.service.js'
-import Video from '../models/Video.js'
+import Video from '../models/LMS/Video.js'
 
 function getFfmpegBinary() {
   if (process.env.FFMPEG_PATH) return process.env.FFMPEG_PATH

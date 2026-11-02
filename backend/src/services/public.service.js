@@ -1,7 +1,7 @@
-import Page from '../models/Page.js'
-import FAQ from '../models/FAQ.js'
-import Partner from '../models/Partner.js'
-import SiteSettings from '../models/SiteSettings.js'
+import Page from '../models/CMS/Page.js'
+import FAQ from '../models/CMS/FAQ.js'
+import Partner from '../models/CMS/Partner.js'
+import SiteSettings from '../models/CMS/SiteSettings.js'
 import { AppError } from '../utils/AppError.js'
 
 export class PublicService {
