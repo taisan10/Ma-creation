@@ -26,9 +26,9 @@ services:
    
   # ---- MongoDB: self-hosted, private to the docker network only ----
   mongo:
-    image: mongo:7
+    image: mongo:7.0
     container_name: lms_mongo
-    command: mongod --wiredTigerCacheSizeGB 1
+    command: mongod --wiredTigerCacheSizeGB 2
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
@@ -40,9 +40,9 @@ services:
       - lms_internal
     restart: unless-stopped
 
-  # 5. Redis for BullMQ
+  # Redis for BullMQ
   redis: 
-    image: redis:alpine
+    image: redis:7-alpine
     container_name: lms_redis
     command: redis-server --requirepass ${REDIS_PASS} --maxmemory 512mb --maxmemory-policy noeviction
     volumes:
@@ -53,7 +53,7 @@ services:
         
   # ---- MinIO: object storage for video files ----
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2024-11-07T00-52-28Z
     container_name: lms_minio
     command: server /data --console-address ":9001"
     environment:
@@ -86,8 +86,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
-          memory: 2G
+          cpus: '6.0'
+          memory: 4G
     networks: 
       - lms_internal
     restart: unless-stopped
@@ -103,7 +103,7 @@ services:
 
   # ---- Caddy: automatic HTTPS reverse proxy, the ONLY container exposed to the internet ----
   caddy:
-    image: caddy:2
+    image: caddy:2-alpine
     environment:
       APP_DOMAIN: ${APP_DOMAIN}
       CDN_DOMAIN: ${CDN_DOMAIN}
@@ -121,7 +121,7 @@ services:
 
       # ---- Cloudflare Quick Tunnel (Only Backend for Flutter) ----
   tunnel:
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:2024.11.0
     container_name: lms_tunnel
     command: tunnel --url http://backend:5000 --no-autoupdate
     networks:
@@ -129,6 +129,21 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+
+  dozzle:
+    image: amir20/dozzle:v8
+    container_name: lms_dozzle
+    volumes: 
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "8080:8080"
+    environment:
+      - DOZZLE_AUTH_PROVIDER=simple
+      - DOZZLE_USERS=${DOZZLE_USER}:${DOZZLE_PASSWORD}
+    networks:
+      - lms_internal
+    restart: unless-stopped
+
 
 volumes:
   video_tmp:

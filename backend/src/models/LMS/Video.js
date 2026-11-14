@@ -72,6 +72,6 @@ const schema = new mongoose.Schema(
 );
 
 schema.index({ course: 1, order: 1 });
-// schema.index({ status: 1 });
+// schema.index({ course: 1, status: 1, active: 1, order: 1 });
 
 export default mongoose.model("Video", schema);

@@ -56,4 +56,6 @@ const refreshTokenSchema = new mongoose.Schema(
   { timestamps: true }
 )
 
+// refreshTokenSchema.index({ userId: 1, isRevoked: 1 });
+
 export default mongoose.models.RefreshToken || mongoose.model('RefreshToken', refreshTokenSchema)

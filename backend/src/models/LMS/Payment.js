@@ -15,4 +15,8 @@ const schema = new mongoose.Schema({
   verifiedAt: Date,
   rawWebhook: Object
 }, { timestamps: true })
+
+// schema.index({ user: 1, plan: 1, status: 1 });
+// schema.index({ user: 1, status: 1 });
+
 export default mongoose.model('Payment', schema)

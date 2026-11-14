@@ -3,9 +3,11 @@
  * Handles: AppError, Zod, Mongoose (Cast, Validation, Duplicate 11000), JWT, SyntaxError, and Server Crashes
  */
 
+import * as Sentry from "@sentry/node";
+
+
 export function notFoundHandler(req, res, next) {
-  res.status(404).j
-  son({
+  res.status(404).json({
     success: false,
     code: 'ROUTE_NOT_FOUND',
     message: `Cannot ${req.method} ${req.originalUrl}`
@@ -69,6 +71,7 @@ export function errorHandler(err, req, res, next) {
 
   // 🛡️ Terminal Logging: Crashes log with stack; API errors log clean source and code
   if (status >= 500) {
+     Sentry.captureException(err);
     console.error(`🔥 [500 Server Crash | Source: ${source}] ${req.method} ${req.originalUrl}:`, err)
   } else {
     console.warn(`⚠️ [API Error ${status} | Source: ${source} | Code: ${code}] ${req.method} ${req.originalUrl} -> ${message}`)

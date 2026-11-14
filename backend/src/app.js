@@ -18,24 +18,40 @@ import { errorHandler, notFoundHandler } from "./middleware/error.js";
 import { webhook } from "./controllers/paymentController.js";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
+import pinoHttp from 'pino-http';
+import { logger } from './utils/logger.js';
+
 
 assertProductionEnv();
 
 const app = express();
-app.set("trust proxy", 1);
-if (process.env.NODE_ENV !== "production") {
-  app.use((req, res, next) => {
-    const start = Date.now();
-    res.on("finish", () => {
-      console.log(
-        `[HTTP] ${req.method} ${req.originalUrl} ${res.statusCode} (${Date.now() - start}ms)`,
-      );
-    });
-    next();
-  });
-}
 
-app.use(helmet({ contentSecurityPolicy: false }));
+
+app.set("trust proxy", 1);
+app.use(pinoHttp({ logger }));
+
+// if (process.env.NODE_ENV !== "production") {
+//   app.use((req, res, next) => {
+//     const start = Date.now();
+//     res.on("finish", () => {
+//       console.log(
+//         `[HTTP] ${req.method} ${req.originalUrl} ${res.statusCode} (${Date.now() - start}ms)`,
+//       );
+//     });
+//     next();
+//   });
+// }
+
+
+// peoduction se pahle ek baar read krna hai ye files ko iska update dena mu
+app.use(
+  helmet({
+    // 1. CSP ko false rakhein kyunki pure REST API hai aur Swagger UI smoothly chale
+    contentSecurityPolicy: false,
+    // 2. Cross-Origin allow karein taaki frontend video aur PDF bina block hue stream kar sake
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 // production se pahle remove krna hai 
 app.use(cors({
   origin: (origin, callback) => {
@@ -113,5 +129,6 @@ app.use("/api-docs", swaggerRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
+
 
 export default app;

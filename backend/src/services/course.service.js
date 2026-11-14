@@ -247,12 +247,6 @@ export class CourseService {
   }
 
   static async getCourseVideos(courseId) {
-    // 🛡️ Auto-heal: Ensure all transcoded READY videos are marked active: true
-    await Video.updateMany(
-      { course: courseId, status: "READY", active: false },
-      { $set: { active: true } },
-    );
-
     return await Video.find({ course: courseId, status: "READY", active: true })
       .select(
         "title description order durationSeconds thumbnailUrl maxWatchMultiplier isHlsReady",

@@ -31,4 +31,6 @@ const schema = new mongoose.Schema(
   { timestamps: true },
 );
 
+// schema.index({ token: 1, user: 1, video: 1 });
+
 export default mongoose.model("PlaybackSession", schema);
