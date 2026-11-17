@@ -1,0 +1,603 @@
+{
+  "schemaVersion": "1.0",
+  "run": {
+    "id": "backend-swarm-baseline-20261114",
+    "kind": "backend-swarm",
+    "title": "MA-Creation Backend Baseline Swarm Audit",
+    "startedAt": "2026-11-14T10:45:00Z",
+    "completedAt": "2026-11-14T11:15:00Z",
+    "repo": {
+      "id": "MA-Creation",
+      "root": ".",
+      "branch": "main",
+      "commit": "36f55fdcf2a44d01c6279a4a21b417b84d1166ba",
+      "dirty": true
+    },
+    "scope": {
+      "modules": [
+        "auth",
+        "videos",
+        "payments",
+        "courses",
+        "admin",
+        "catalog",
+        "books",
+        "leads"
+      ],
+      "filesInspected": [
+        "backend/src/routes/auth.js",
+        "backend/src/routes/videos.js",
+        "backend/src/routes/payments.js",
+        "backend/src/routes/courses.js",
+        "backend/src/routes/admin.js",
+        "backend/src/routes/adminLms.js",
+        "backend/src/routes/catalog.js",
+        "backend/src/routes/public.js",
+        "backend/src/routes/books.js",
+        "backend/src/routes/leads.js",
+        "backend/src/app.js",
+        "backend/src/server.js"
+      ],
+      "filesExcluded": [
+        "node_modules/**",
+        "frontend/dist/**"
+      ],
+      "sharedDependencies": [
+        "express",
+        "mongoose",
+        "ioredis",
+        "bullmq",
+        "minio",
+        "razorpay",
+        "argon2",
+        "jsonwebtoken",
+        "zod",
+        "helmet",
+        "cors"
+      ]
+    }
+  },
+  "modules": [
+    {
+      "name": "courses",
+      "slug": "courses",
+      "description": "Backend Courses & LMS Hierarchy Module",
+      "status": "FAIL",
+      "scope": {
+        "files": [
+          "backend/src/routes/courses.js",
+          "backend/src/controllers/courseController.js",
+          "backend/src/services/course.service.js",
+          "backend/src/validators/course.validator.js",
+          "backend/src/models/LMS/Course.js",
+          "backend/src/models/LMS/Category.js"
+        ],
+        "sharedDependencies": [
+          "backend/src/routes/adminLms.js",
+          "backend/src/middleware/auth.js",
+          "backend/src/middleware/requireEntitlement.js",
+          "backend/src/middleware/validate.js",
+          "backend/src/middleware/upload.middleware.js",
+          "backend/src/models/LMS/Video.js",
+          "backend/src/models/LMS/Payment.js",
+          "backend/src/models/CMS/Plan.js",
+          "backend/src/config/minio.js"
+        ],
+        "excluded": []
+      },
+      "summary": {
+        "totalFindings": 11,
+        "bySeverity": {
+          "CRITICAL": 0,
+          "HIGH": 3,
+          "MEDIUM": 4,
+          "LOW": 4,
+          "INFO": 0
+        },
+        "byCategory": {
+          "DATA_INTEGRITY_VIOLATION": 2,
+          "BROKEN_ACCESS_CONTROL": 1,
+          "CONCURRENCY_DEFECT": 1,
+          "FUNCTIONAL_DEFECT": 1,
+          "INPUT_VALIDATION_DEFECT": 1,
+          "PERFORMANCE_DEFECT": 2,
+          "IMPLEMENTATION_DEFECT": 1,
+          "CODE_QUALITY_DEFECT": 1,
+          "MISSING_TEST": 1
+        }
+      },
+      "checks": [
+        {
+          "id": "node-syntax-courses",
+          "name": "Node.js Syntax Validation",
+          "kind": "LINT",
+          "required": true,
+          "status": "PASS",
+          "scope": "backend/src/routes/courses.js, courseController.js, course.service.js, course.validator.js, Course.js, Category.js",
+          "command": "node --check backend/src/server.js",
+          "exitCode": 0,
+          "note": "ES module syntax and imports verified clean"
+        }
+      ],
+      "skillExecutions": [
+        {
+          "name": "security-audit",
+          "invocationMode": "SKILL_FILE_LOADED",
+          "status": "EXECUTED",
+          "scope": "backend/src/{routes,controllers,services,validators}/course*",
+          "findingsProduced": [
+            "courses-entitlement-autoheal-bypass",
+            "courses-cascade-delete-non-atomic",
+            "courses-fk-integrity-unvalidated"
+          ]
+        },
+        {
+          "name": "audit-module",
+          "invocationMode": "SKILL_FILE_LOADED",
+          "status": "EXECUTED",
+          "scope": "courses",
+          "findingsProduced": [
+            "courses-video-title-toctou",
+            "courses-admin-lms-no-updates",
+            "courses-schema-length-mismatch",
+            "courses-commented-indexes",
+            "courses-unsorted-category-grouping",
+            "courses-missing-route-validation-dead-code",
+            "courses-unbounded-queries-dos",
+            "courses-missing-test-suite"
+          ]
+        }
+      ],
+      "testMatrix": {
+        "summary": {
+          "existingStrong": 0,
+          "existingWeak": 2,
+          "missing": 12,
+          "total": 14
+        },
+        "inventory": [
+          {
+            "endpoint": "GET /api/courses/has-access",
+            "classification": "EXISTING_WEAK",
+            "details": "Tested only in k6 quick-smoke load test; lacks automated unit test for users without payments, paid payments with inactive courses, or multi-plan memberships."
+          },
+          {
+            "endpoint": "GET /api/courses/mine",
+            "classification": "EXISTING_WEAK",
+            "details": "Invoked in k6 student workflow; lacks negative tests for unauthenticated users, inactive plans, orphan categories, or sorting order verification."
+          },
+          {
+            "endpoint": "GET /api/courses/:courseId/videos",
+            "classification": "MISSING",
+            "details": "Zero automated unit or integration tests for course entitlement verification, 403 NOT_ENTITLED rejection, 404 on inactive courses, or malformed courseId parameter validation."
+          },
+          {
+            "endpoint": "POST /api/admin/lms/categories",
+            "classification": "MISSING",
+            "details": "No test for duplicate slug 11000 handling, invalid characters, or non-admin access rejection."
+          },
+          {
+            "endpoint": "GET /api/admin/lms/categories",
+            "classification": "MISSING",
+            "details": "No test for ordering verification, empty state, or pagination bounds."
+          },
+          {
+            "endpoint": "POST /api/admin/lms/courses",
+            "classification": "MISSING",
+            "details": "No test for non-existent category or plan ID foreign key verification, title length limits (160 vs 180 chars), or duplicate title rejection."
+          },
+          {
+            "endpoint": "GET /api/admin/lms/courses",
+            "classification": "MISSING",
+            "details": "No test for populated fields (category, plan), sorting, or admin authorization boundary."
+          },
+          {
+            "endpoint": "POST /api/admin/lms/videos",
+            "classification": "MISSING",
+            "details": "No test for concurrent duplicate video title race condition, non-existent courseId rejection, or maxWatchMultiplier boundaries."
+          },
+          {
+            "endpoint": "GET /api/admin/lms/videos",
+            "classification": "MISSING",
+            "details": "No test for courseId query filtering, unbounded collection dumps, or malformed query handling."
+          },
+          {
+            "endpoint": "DELETE /api/admin/lms/categories/:id",
+            "classification": "MISSING",
+            "details": "No test for cascading delete integrity across MinIO and MongoDB, or failure handling during MinIO network timeouts."
+          },
+          {
+            "endpoint": "DELETE /api/admin/lms/courses/:id",
+            "classification": "MISSING",
+            "details": "No test for cascading video and MinIO deletion, active student access impact, or transcode queue job cancellation."
+          },
+          {
+            "endpoint": "DELETE /api/admin/lms/videos/:id",
+            "classification": "MISSING",
+            "details": "No test for MinIO asset purge, BullMQ transcode job removal, or /tmp/uploads directory cleanup."
+          },
+          {
+            "endpoint": "PATCH /api/admin/lms/courses/:id",
+            "classification": "MISSING",
+            "details": "Missing endpoint: no route exists for updating course metadata, order, or active state."
+          },
+          {
+            "endpoint": "PATCH /api/admin/lms/categories/:id",
+            "classification": "MISSING",
+            "details": "Missing endpoint: no route exists for updating category names, slugs, or order."
+          }
+        ]
+      },
+      "findings": [
+        {
+          "id": "COURSE-FINDING-001",
+          "fingerprint": "courses-fk-integrity-unvalidated",
+          "primaryCategory": "DATA_INTEGRITY_VIOLATION",
+          "severity": "HIGH",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Unvalidated Foreign Key References Allow Creation of Orphaned Courses and Inaccessible Content",
+          "location": {
+            "file": "backend/src/services/course.service.js",
+            "lineStart": 73,
+            "lineEnd": 95,
+            "symbol": "CourseService.createCourse"
+          },
+          "evidence": "CourseService.createCourse directly creates Course documents with req.body.category and req.body.plan without verifying Category.exists({ _id: category }) or Plan.exists({ _id: plan }).",
+          "scenario": "An administrator submits POST /api/admin/lms/courses with an arbitrary 24-character hex string for category or plan (e.g. from a deleted plan or typo). The course is persisted in MongoDB. Because the plan does not exist, no student can ever purchase or unlock the course. Because the category does not exist, course.category is null, causing it to fall into 'uncategorized' or crash frontend views expecting category metadata.",
+          "impact": "Data corruption, permanently inaccessible course content, broken curriculum hierarchy, and frontend rendering anomalies.",
+          "reproduction": "As admin, send POST /api/admin/lms/courses with { category: '660000000000000000000001', plan: '660000000000000000000002', title: 'Orphan Course' }. Request returns 201 Created and persists an unlinked course.",
+          "remediation": "Add existence checks in CourseService.createCourse: const [catExists, planExists] = await Promise.all([Category.exists({ _id: category }), Plan.exists({ _id: plan })]); if (!catExists) throw new AppError('Category not found', 404, 'CATEGORY_NOT_FOUND'); if (!planExists) throw new AppError('Plan not found', 404, 'PLAN_NOT_FOUND');",
+          "regressionTest": "Call createCourse with non-existent category/plan IDs and assert it throws 404 CATEGORY_NOT_FOUND / PLAN_NOT_FOUND.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-courses-lead"
+          ],
+          "sourceSkills": [
+            "audit-module",
+            "security-audit"
+          ],
+          "module": "courses"
+        },
+        {
+          "id": "COURSE-FINDING-002",
+          "fingerprint": "courses-cascade-delete-non-atomic",
+          "primaryCategory": "DATA_INTEGRITY_VIOLATION",
+          "severity": "HIGH",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Non-Atomic Cascading Deletions Without Transaction Cause Partial Data Loss and Storage Desynchronization",
+          "location": {
+            "file": "backend/src/services/course.service.js",
+            "lineStart": 55,
+            "lineEnd": 114,
+            "symbol": "CourseService.deleteCategory & deleteCourse"
+          },
+          "evidence": "deleteCategory and deleteCourse delete MinIO assets via deleteMinioVideoAssets, then call Video.deleteMany and Course.deleteMany without a MongoDB transaction session. Neither method cleans up BullMQ transcode jobs or /tmp/uploads/${videoId} files.",
+          "scenario": "An administrator deletes an active course or category. If MinIO asset deletion times out (accumulating thousands of HLS segment keys in memory via listObjects) or throws a network error, MongoDB records remain while video files are partially erased. Furthermore, active transcode jobs in BullMQ are not removed, causing workers to crash when updating non-existent video records. Additionally, students who paid for the associated plan have their paid course content wiped out without warning, confirmation, or audit trail.",
+          "impact": "Desynchronized storage state (MinIO vs MongoDB), unhandled background worker crashes in BullMQ, and irreversible deletion of student-paid educational material without audit logging.",
+          "reproduction": "Trigger DELETE /api/admin/lms/courses/:id while a video in that course is actively transcoding. The video is deleted from MongoDB, but the BullMQ job continues running and throws an unhandled error upon transcode completion.",
+          "remediation": "Wrap multi-collection operations in a MongoDB session transaction (session.startTransaction()). Replicate BullMQ queue cancellation and /tmp/uploads cleanup from deleteVideo into deleteCourse and deleteCategory. Implement soft-deletion (active: false) and verify no active paid entitlements exist before permitting deletion.",
+          "regressionTest": "Execute deleteCourse on a course with pending BullMQ transcode jobs and assert the queue job is evicted, local temp directories are purged, and DB operations rollback on MinIO failure.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-courses-lead"
+          ],
+          "sourceSkills": [
+            "audit-module",
+            "security-audit"
+          ],
+          "module": "courses"
+        },
+        {
+          "id": "COURSE-FINDING-003",
+          "fingerprint": "courses-entitlement-autoheal-bypass",
+          "primaryCategory": "BROKEN_ACCESS_CONTROL",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Entitlement Middleware Automatically Mutates Deactivated Videos Back to Active on Read Requests",
+          "location": {
+            "file": "backend/src/middleware/requireEntitlement.js",
+            "lineStart": 29,
+            "lineEnd": 37,
+            "symbol": "requireVideoEntitlement"
+          },
+          "evidence": "if (!video) { video = await Video.findOneAndUpdate({ _id: req.params.videoId, status: 'READY' }, { $set: { active: true } }, { new: true }) }",
+          "scenario": "An administrator intentionally disables or retracts a video by setting active: false (e.g. copyright notice, outdated content, or quality dispute). When an entitled student requests GET /api/videos/:videoId/key or POST /api/videos/:videoId/playback-token, requireVideoEntitlement detects active: false with status: 'READY' and automatically executes findOneAndUpdate({ $set: { active: true } }), overturning the administrator's deliberate deactivation.",
+          "impact": "Administrative content control is subverted; read-only requests execute unauthorized state mutations on the database.",
+          "reproduction": "Set active: false on a READY video in MongoDB. As an enrolled student, request GET /api/videos/:videoId/key. The request succeeds and the database document now has active: true.",
+          "remediation": "Remove the findOneAndUpdate auto-heal logic from requireVideoEntitlement. Video activation should occur strictly within the transcode worker upon pipeline completion or via an explicit administrative update endpoint.",
+          "regressionTest": "Deactivate a video (active: false, status: 'READY'), issue a student playback request, and verify the endpoint responds with 404 NOT_FOUND and leaves active: false unchanged.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-courses-lead"
+          ],
+          "sourceSkills": [
+            "audit-module",
+            "security-audit"
+          ],
+          "module": "courses"
+        },
+        {
+          "id": "COURSE-FINDING-004",
+          "fingerprint": "courses-video-title-toctou",
+          "primaryCategory": "CONCURRENCY_DEFECT",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Time-of-Check to Time-of-Use Race Condition in Video Title Uniqueness Allows Duplicate Videos",
+          "location": {
+            "file": "backend/src/services/course.service.js",
+            "lineStart": 132,
+            "lineEnd": 156,
+            "symbol": "CourseService.createVideoMeta"
+          },
+          "evidence": "Video title uniqueness is checked using an application-level findOne regex query without a matching unique compound index on { course: 1, title: 1 } in Video.js.",
+          "scenario": "Two administrator requests (or double-click submissions) submit the same video metadata simultaneously. Both requests execute the findOne query concurrently before either document is inserted. Both checks pass, resulting in duplicate video entries with identical titles in the course playlist.",
+          "impact": "Corrupted curriculum playlists, duplicate transcode jobs, and confused student navigation.",
+          "reproduction": "Send two concurrent POST /api/admin/lms/videos requests with identical course and title. Both return 201 Created and two identical video records are created.",
+          "remediation": "Add a unique compound index with collation in backend/src/models/LMS/Video.js: schema.index({ course: 1, title: 1 }, { unique: true, collation: { locale: 'en', strength: 2 } }). Catch MongoDB 11000 duplicate key error and return 409 DUPLICATE_TITLE.",
+          "regressionTest": "Execute concurrent video creation requests with identical titles and verify exactly one succeeds and the other fails with 409 DUPLICATE_TITLE.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-courses-lead"
+          ],
+          "sourceSkills": [
+            "audit-module",
+            "security-audit"
+          ],
+          "module": "courses"
+        },
+        {
+          "id": "COURSE-FINDING-005",
+          "fingerprint": "courses-admin-lms-no-updates",
+          "primaryCategory": "FUNCTIONAL_DEFECT",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Complete Absence of Edit/Update Routes in Admin LMS Module Prevents Safe Metadata Modifications",
+          "location": {
+            "file": "backend/src/routes/adminLms.js",
+            "lineStart": 1,
+            "lineEnd": 31,
+            "symbol": "adminLmsRoutes"
+          },
+          "evidence": "backend/src/routes/adminLms.js exposes only POST and DELETE handlers for categories, courses, and videos. No PATCH or PUT routes exist.",
+          "scenario": "If an administrator makes a typo in a course title, wants to update a thumbnail URL, reorder videos, or toggle active status, there is no API route to perform an update. The only available action is deleting the entire entity. Deleting a course permanently destroys all videos from MinIO and MongoDB, erasing student progress.",
+          "impact": "Severe administrative usability blocker forcing destructive cascading operations for minor metadata edits.",
+          "reproduction": "Attempt to send PATCH /api/admin/lms/courses/:id. Express returns 404 ROUTE_NOT_FOUND.",
+          "remediation": "Add PATCH /categories/:id, PATCH /courses/:id, and PATCH /videos/:id routes in adminLms.js with proper validation schemas and service update methods.",
+          "regressionTest": "Send PATCH /api/admin/lms/courses/:id with an updated title and verify the title is updated without deleting child video records.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-courses-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "module": "courses"
+        },
+        {
+          "id": "COURSE-FINDING-006",
+          "fingerprint": "courses-commented-indexes",
+          "primaryCategory": "PERFORMANCE_DEFECT",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "High-Concurrency Compound Indexes Commented Out in Mongoose Schemas Cause Memory Sorts and COLLSCANs",
+          "location": {
+            "file": "backend/src/models/LMS/Video.js",
+            "lineStart": 74,
+            "lineEnd": 76,
+            "symbol": "Video.schema"
+          },
+          "evidence": "In Video.js: line 75 '// schema.index({ course: 1, status: 1, active: 1, order: 1 });' is commented out. In Payment.js: lines 19-20 '// schema.index({ user: 1, plan: 1, status: 1 });' is commented out.",
+          "scenario": "On new deployments or fresh database instances where ensure-indexes.js was not manually run, Mongoose autoIndex will not create compound indexes for video playlist lookups and entitlement checks. Video.find({ course: courseId, status: 'READY', active: true }).sort({ order: 1, createdAt: 1 }) falls back to in-memory sorting, and Payment.exists({ user, plan, status: 'paid' }) performs sequential scans across all payments of the user.",
+          "impact": "Severe database CPU spikes and memory exhaustion under concurrent student video streaming and course browsing.",
+          "reproduction": "Inspect schema definitions in Video.js and Payment.js; run queries against a newly initialized MongoDB container without executing ensure-indexes.js; verify via explain('executionStats') that queries perform in-memory SORT stages.",
+          "remediation": "Uncomment compound index definitions in backend/src/models/LMS/Video.js and backend/src/models/LMS/Payment.js so they are automatically registered on application bootstrap.",
+          "regressionTest": "Run mongoose.model('Video').init() and assert idx_video_course_ready_active is present in getIndexes().",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-courses-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "module": "courses"
+        },
+        {
+          "id": "COURSE-FINDING-007",
+          "fingerprint": "courses-schema-length-mismatch",
+          "primaryCategory": "INPUT_VALIDATION_DEFECT",
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Zod Validation and Mongoose Schema Character Length Mismatches Cause Unhandled Mongoose Errors",
+          "location": {
+            "file": "backend/src/validators/course.validator.js",
+            "lineStart": 19,
+            "lineEnd": 27,
+            "symbol": "createCourseSchema & createVideoMetaSchema"
+          },
+          "evidence": "createCourseSchema.title allows max(180) while Course.js enforces maxLength: 160. createVideoMetaSchema.title allows max(200) while Video.js enforces maxLength: 160.",
+          "scenario": "An administrator submits a course title with 170 characters. The Zod validator accepts the request, but Mongoose throws a ValidationError at the database layer. While the error handler catches this as MONGO_SCHEMA_ERROR, it breaks API contract consistency.",
+          "impact": "API contract inconsistency and unexpected 400 DB validation errors returned to users.",
+          "reproduction": "POST /api/admin/lms/courses with a title of 170 characters; request passes Zod validation but fails with Mongoose ValidationError.",
+          "remediation": "Align Zod validation schemas with Mongoose models by configuring title: z.string().min(1).max(160) across both course.validator.js and video models.",
+          "regressionTest": "Send POST /api/admin/lms/courses with a 161-character title and verify Zod returns a 400 validation error before reaching MongoDB.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-courses-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "module": "courses"
+        },
+        {
+          "id": "COURSE-FINDING-008",
+          "fingerprint": "courses-unsorted-category-grouping",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Student Course Dashboard Groups Courses in Map Without Respecting Category Display Order",
+          "location": {
+            "file": "backend/src/services/course.service.js",
+            "lineStart": 233,
+            "lineEnd": 247,
+            "symbol": "CourseService.listUserCourses"
+          },
+          "evidence": "CourseService.listUserCourses groups courses into a Map keyed by category._id in the order courses were returned by Course.find().sort({ order: 1, createdAt: 1 }), completely omitting category.order sorting.",
+          "scenario": "Category A has administrative display order 10, and Category B has order 1. If Course 1 under Category A has course order 0 and Course 2 under Category B has course order 1, Course 1 is processed first, inserting Category A into the Map before Category B. The student dashboard displays Category A ahead of Category B, disregarding the admin display order.",
+          "impact": "Inconsistent, non-deterministic category ordering on the student LMS dashboard.",
+          "reproduction": "Create Category A with order 10 and Category B with order 1. Create a course in Category A with order 0. Query GET /api/courses/mine; Category A appears before Category B in the response array.",
+          "remediation": "Sort the final grouped array before returning: return Array.from(grouped.values()).sort((a, b) => (a.category?.order ?? 9999) - (b.category?.order ?? 9999));",
+          "regressionTest": "Call listUserCourses with multi-category courses and verify categories are sorted strictly ascending by category.order.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-courses-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "module": "courses"
+        },
+        {
+          "id": "COURSE-FINDING-009",
+          "fingerprint": "courses-missing-route-validation-dead-code",
+          "primaryCategory": "CODE_QUALITY_DEFECT",
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Missing Route Parameter Validation and Broken Dead Function finalizeVideoUpload",
+          "location": {
+            "file": "backend/src/routes/courses.js",
+            "lineStart": 15,
+            "lineEnd": 15,
+            "symbol": "router.get('/:courseId/videos')"
+          },
+          "evidence": "In courses.js: router.get('/:courseId/videos', requireCourseEntitlement, ...) has no validation middleware for courseId. In courseController.js: uploadVideoFile calls CourseService.finalizeVideoUpload, which does not exist.",
+          "scenario": "Malformed courseId parameters in /api/courses/:courseId/videos bypass request validation and directly trigger Mongoose CastErrors. In courseController.js, uploadVideoFile is orphaned dead code that would throw a runtime TypeError if invoked.",
+          "impact": "Bypasses pre-routing input validation; dead broken code reduces codebase maintainability.",
+          "reproduction": "Inspect courseController.js:33-36; CourseService.finalizeVideoUpload is undefined.",
+          "remediation": "Add validate(courseIdParamSchema, 'params') to courses.js. Remove the unused uploadVideoFile function from courseController.js.",
+          "regressionTest": "Call GET /api/courses/not-a-valid-id/videos and verify Zod returns 400 VALIDATION_ERROR before database query execution.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-courses-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "module": "courses"
+        },
+        {
+          "id": "COURSE-FINDING-010",
+          "fingerprint": "courses-unbounded-queries-dos",
+          "primaryCategory": "PERFORMANCE_DEFECT",
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Unbounded Queries Without Pagination in Admin LMS Endpoints Allow Memory Exhaustion",
+          "location": {
+            "file": "backend/src/services/course.service.js",
+            "lineStart": 51,
+            "lineEnd": 161,
+            "symbol": "listCategoriesAdmin, listCoursesAdmin, listVideosAdmin"
+          },
+          "evidence": "Category.find(), Course.find(), and Video.find(filter) are executed without limit() or pagination controls.",
+          "scenario": "When an administrator queries GET /api/admin/lms/videos without specifying a courseId, or when the platform accumulates hundreds of courses and thousands of videos, the server attempts to load all documents with populated references into memory, resulting in high heap allocation and latency.",
+          "impact": "Event loop blocking, increased response latency, and potential Node.js process Out-Of-Memory (OOM) under large datasets.",
+          "reproduction": "Seed 1,000 video records; call GET /api/admin/lms/videos; observe full table scan and multi-megabyte JSON payload.",
+          "remediation": "Add limit and page query parameters with sane defaults (e.g. limit: 50, max: 100) and cursor/offset pagination to all administrative listing endpoints.",
+          "regressionTest": "Query GET /api/admin/lms/videos?limit=10 and verify exactly 10 records and pagination metadata are returned.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-courses-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "module": "courses"
+        },
+        {
+          "id": "COURSE-FINDING-011",
+          "fingerprint": "courses-missing-test-suite",
+          "primaryCategory": "MISSING_TEST",
+          "severity": "HIGH",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Complete Absence of Automated Test Suite for Courses and LMS Business Logic",
+          "location": {
+            "file": "backend/package.json",
+            "lineStart": 6,
+            "lineEnd": 17,
+            "symbol": "scripts"
+          },
+          "evidence": "backend/package.json contains no test script or framework (no jest, mocha, vitest). Only load-tests/ k6 scripts exist. Zero automated unit or integration tests cover course entitlements, video listing, or admin LMS mutations.",
+          "scenario": "Refactoring course entitlement checks, payment status verification, or curriculum hierarchies cannot be validated against regressions, allowing subtle privilege escalation or access gating bypasses to reach production undetected.",
+          "impact": "High risk of regressions in payment entitlement gating and access control logic during ongoing development.",
+          "reproduction": "Inspect backend/package.json and backend/ directory; observe zero automated unit/integration test suites.",
+          "remediation": "Configure an automated test runner (such as Vitest or Jest with mongodb-memory-server) and implement comprehensive test suites covering requireCourseEntitlement, listUserCourses, and admin LMS operations.",
+          "regressionTest": "Execute npm test and verify all course entitlement, BOLA, and cascade deletion test suites execute and pass.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-courses-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "module": "courses"
+        }
+      ],
+      "coverage": {},
+      "auditRepoId": "MA-Creation",
+      "auditBranch": "main",
+      "auditCommit": "36f55fdcf2a44d01c6279a4a21b417b84d1166ba",
+      "auditRunId": "backend-swarm-baseline-20261114",
+      "computedVerdict": "FAIL",
+      "verdictNotes": [
+        "At least one verified open Critical/High finding exists."
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "id": "node-syntax-courses",
+      "name": "Node.js Syntax Validation",
+      "kind": "LINT",
+      "required": true,
+      "status": "PASS",
+      "scope": "backend/src/routes/courses.js, courseController.js, course.service.js, course.validator.js, Course.js, Category.js",
+      "command": "node --check backend/src/server.js",
+      "exitCode": 0,
+      "note": "ES module syntax and imports verified clean"
+    }
+  ],
+  "crossModuleFindings": []
+}

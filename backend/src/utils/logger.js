@@ -1,17 +1,34 @@
+
+
 import pino from 'pino';
 
-export const logger = pino({
-  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
-  redact: ['req.headers.authorization', 'req.headers.cookie'],
+function createLogger() {
+  const isDev = process.env.NODE_ENV !== 'production';
+  const baseConfig = {
+    level: isDev ? 'debug' : 'info',
+    redact: ['req.headers.authorization', 'req.headers.cookie', 'req.headers["x-refresh-token"]'],
+  };
 
-  transport: process.env.NODE_ENV !== 'production'
-  ? {
-    target : 'pino-pretty',
-    options: {
-      colorize: true,
-      translateTime: 'SYS:standard',
-      ignore: 'pid,hostname',
-    },
+  if (isDev) {
+    try {
+      return pino({
+        ...baseConfig,
+        transport: {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+            translateTime: 'SYS:standard',
+            ignore: 'pid,hostname',
+          },
+        },
+      });
+    } catch {
+      // Container mein pino-pretty na hone par crash nahi hoga
+      return pino(baseConfig);
+    }
   }
-  : undefined,
-});
+
+  return pino(baseConfig);
+}
+
+export const logger = createLogger();

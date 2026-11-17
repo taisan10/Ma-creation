@@ -18,7 +18,6 @@ const schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Video",
       required: true,
-      index: true,
     },
     token: { type: String, required: true, unique: true }, // opaque random id, returned to the client
     issuedAt: { type: Date, default: Date.now },
@@ -27,6 +26,8 @@ const schema = new mongoose.Schema(
     ip: String,
     userAgent: String,
     flags: [{ type: String, maxLength: 60 }], // e.g. 'recording_suspected', 'incognito_suspected'
+    maxAllowedSeconds: { type: Number, default: 0 },
+    
   },
   { timestamps: true },
 );

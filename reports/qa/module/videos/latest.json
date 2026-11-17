@@ -1,0 +1,494 @@
+{
+  "schemaVersion": "1.0",
+  "run": {
+    "id": "backend-swarm-baseline-20261114-final",
+    "kind": "backend-swarm",
+    "title": "MA-Creation Backend Baseline Swarm Audit",
+    "startedAt": "2026-11-14T10:45:00Z",
+    "completedAt": "2026-11-14T11:15:00Z",
+    "repo": {
+      "id": "MA-Creation",
+      "root": ".",
+      "branch": "main",
+      "commit": "36f55fdcf2a44d01c6279a4a21b417b84d1166ba",
+      "dirty": true
+    },
+    "scope": {
+      "modules": [
+        "auth",
+        "videos",
+        "payments",
+        "courses",
+        "admin",
+        "catalog",
+        "books",
+        "leads"
+      ],
+      "filesInspected": [
+        "backend/src/routes/auth.js",
+        "backend/src/routes/videos.js",
+        "backend/src/routes/payments.js",
+        "backend/src/routes/courses.js",
+        "backend/src/routes/admin.js",
+        "backend/src/routes/adminLms.js",
+        "backend/src/routes/catalog.js",
+        "backend/src/routes/public.js",
+        "backend/src/routes/books.js",
+        "backend/src/routes/leads.js",
+        "backend/src/app.js",
+        "backend/src/server.js"
+      ],
+      "filesExcluded": [
+        "node_modules/**",
+        "frontend/dist/**"
+      ],
+      "sharedDependencies": [
+        "express",
+        "mongoose",
+        "ioredis",
+        "bullmq",
+        "minio",
+        "razorpay",
+        "argon2",
+        "jsonwebtoken",
+        "zod",
+        "helmet",
+        "cors"
+      ]
+    }
+  },
+  "modules": [
+    {
+      "name": "videos",
+      "slug": "videos",
+      "status": "FAIL",
+      "scope": {
+        "files": [
+          "backend/src/routes/videos.js",
+          "backend/src/controllers/videoController.js",
+          "backend/src/services/video.service.js",
+          "backend/src/services/hls.service.js",
+          "backend/src/services/transcode.service.js",
+          "backend/src/services/realtime.js",
+          "backend/src/queues/video.queue.js",
+          "backend/src/workers/transcode.worker.js",
+          "backend/src/validators/video.validator.js",
+          "backend/src/middleware/requireEntitlement.js",
+          "backend/src/middleware/upload.middleware.js",
+          "backend/src/models/LMS/Video.js",
+          "backend/src/models/LMS/PlaybackSession.js",
+          "backend/src/models/LMS/WatchLog.js"
+        ],
+        "sharedDependencies": [
+          "backend/src/config/minio.js",
+          "backend/src/config/redis.js",
+          "backend/src/middleware/auth.js",
+          "backend/src/middleware/validate.js"
+        ],
+        "excluded": []
+      },
+      "testMatrix": [
+        {
+          "endpoint": "GET /api/videos/:videoId/key",
+          "status": "MISSING",
+          "notes": "Key retrieval authentication and session validation"
+        },
+        {
+          "endpoint": "POST /api/videos/:videoId/playback-token",
+          "status": "MISSING",
+          "notes": "Playback token generation and entitlement verification"
+        },
+        {
+          "endpoint": "POST /api/videos/:videoId/watch-event",
+          "status": "MISSING",
+          "notes": "Heartbeat watch duration accumulation and limit enforcement"
+        },
+        {
+          "endpoint": "GET /api/videos/:videoId/hls/manifest.m3u8",
+          "status": "MISSING",
+          "notes": "HLS master manifest delivery and rewriting"
+        },
+        {
+          "endpoint": "GET /api/videos/:videoId/hls/:segment",
+          "status": "MISSING",
+          "notes": "Media segment streaming and watch limit gating"
+        }
+      ],
+      "findings": [
+        {
+          "fingerprint": "VID-SEC-001",
+          "title": "Unauthenticated / Unchecked AES-128 Key Delivery Endpoint Lacks Playback Token Validation",
+          "severity": "HIGH",
+          "primaryCategory": "SECURITY_VULNERABILITY",
+          "location": {
+            "file": "backend/src/controllers/videoController.js",
+            "lineStart": 27,
+            "lineEnd": null,
+            "symbol": "videoService"
+          },
+          "evidence": "router.get('/:videoId/key', requireVideoEntitlement, asyncHandler(c.getVideoKey)) calls VideoService.getVideoKey({ video, userId, req }), which verifies User.playbackLocked and WatchLog watch limit, but completely ignores req.query.token and does not verify the existence of an active, valid PlaybackSession.",
+          "impact": "Any entitled user possessing a standard Bearer JWT can retrieve the raw 16-byte AES-128 DRM key directly without starting a playback session, allowing offline caching and decryption.",
+          "reproduction": "curl -H 'Authorization: Bearer <STUDENT_JWT>' http://localhost:5000/api/videos/<VIDEO_ID>/key -> Returns 200 OK with raw 16-byte binary decryption key without initiating PlaybackSession.",
+          "remediation": "Validate req.query.token against PlaybackSession in VideoService.getVideoKey, verify session.expiresAt > new Date(), session.video == videoId, and session.user == userId before returning key buffer.",
+          "regressionTest": "Call GET /api/videos/:videoId/key without a valid, unexpired playback session token and assert response is 401/403.",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "id": "VID-SEC-001",
+          "module": "videos",
+          "scenario": ""
+        },
+        {
+          "fingerprint": "VID-SEC-002",
+          "title": "Automatic Reactivation of Deactivated Videos in requireVideoEntitlement Middleware",
+          "severity": "HIGH",
+          "primaryCategory": "SECURITY_VULNERABILITY",
+          "location": {
+            "file": "backend/src/middleware/requireEntitlement.js",
+            "lineStart": 29,
+            "lineEnd": null,
+            "symbol": "videoService"
+          },
+          "evidence": "let video = await Video.findOne({ _id: req.params.videoId, active: true }); if (!video) { video = await Video.findOneAndUpdate({ _id: req.params.videoId, status: 'READY' }, { $set: { active: true } }, { new: true }); }",
+          "impact": "When an administrator deliberately sets video.active = false, any incoming user request touching requireVideoEntitlement automatically updates the database to active: true, overriding administrative intent.",
+          "reproduction": "Set video.active = false via admin CMS. Perform GET /api/videos/:videoId/hls/manifest.m3u8 as an entitled user. Database record for video is silently flipped back to active = true.",
+          "remediation": "Remove the auto-heal write mutation from authorization middleware; return AppError('Video not found', 404, 'NOT_FOUND') if video is inactive.",
+          "regressionTest": "Query an inactive video with status 'READY' through requireVideoEntitlement and verify that it returns 404 and does not modify active: false in DB.",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "id": "VID-SEC-002",
+          "module": "videos",
+          "scenario": ""
+        },
+        {
+          "fingerprint": "VID-SEC-003",
+          "title": "HLS Segment Streaming Endpoint Omits Watch Limit and Quota Verification",
+          "severity": "HIGH",
+          "primaryCategory": "SECURITY_VULNERABILITY",
+          "location": {
+            "file": "backend/src/controllers/videoController.js",
+            "lineStart": 83,
+            "lineEnd": null,
+            "symbol": "videoService"
+          },
+          "evidence": "router.get('/:videoId/hls/:segment', requireVideoEntitlement, asyncHandler(c.getHlsSegment)) only executes requireVideoEntitlement, which checks plan ownership. Neither getHlsSegment nor requireVideoEntitlement checks WatchLog.totalWatchedSeconds >= maxAllowedSeconds.",
+          "impact": "Users whose watch limit has expired can continue streaming all video chunks (.ts) directly from MinIO as long as they retain the encryption key, bypassing all plan watch caps.",
+          "reproduction": "Consume full watch quota for a video. Issue GET /api/videos/:videoId/hls/res_1080p_seg_000.ts. Server returns 200 OK with video/MP2T content.",
+          "remediation": "Add watch quota verification middleware to getHlsSegment or validate active non-expired PlaybackSession on segment streaming requests.",
+          "regressionTest": "Request HLS segment after WatchLog.totalWatchedSeconds exceeds maxAllowedSeconds and verify 403 WATCH_LIMIT_REACHED is returned.",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "id": "VID-SEC-003",
+          "module": "videos",
+          "scenario": ""
+        },
+        {
+          "fingerprint": "VID-SEC-004",
+          "title": "HLS Variant Sub-Playlists and Multi-Bitrate ABR Segments Omit Playback Session Token",
+          "severity": "MEDIUM",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "location": {
+            "file": "backend/src/controllers/videoController.js",
+            "lineStart": 56,
+            "lineEnd": null,
+            "symbol": "videoService"
+          },
+          "evidence": "getHlsManifest replaces /(segment_\\d+\\.ts)/g with token query parameter, but TranscodeService outputs ABR segments named res_%v_seg_%03d.ts and sub-playlists res_%v.m3u8. Sub-playlists are piped raw from MinIO without token rewriting in getHlsSegment.",
+          "impact": "Mobile players (Android/iOS) fail with 401 Unauthorized when requesting variant playlists or segments because token query parameters are omitted and players do not transmit custom Bearer headers.",
+          "reproduction": "Request GET /api/videos/:videoId/hls/manifest.m3u8?token=<UUID>. Sub-playlist links inside master.m3u8 lack token parameters.",
+          "remediation": "Update regex to match res_\\w+\\.m3u8 and res_\\w+_seg_\\d+\\.ts, and perform token injection in getHlsSegment when serving variant .m3u8 playlists.",
+          "regressionTest": "Request master playlist with token and verify that all sub-playlist URLs and subsequent segment URLs carry the token query parameter.",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "id": "VID-SEC-004",
+          "module": "videos",
+          "scenario": ""
+        },
+        {
+          "fingerprint": "VID-SEC-005",
+          "title": "Trivial Bypass and Insecure Substring Matching in Key Delivery Hotlinking Protection",
+          "severity": "MEDIUM",
+          "primaryCategory": "SECURITY MISCONFIGURATION",
+          "location": {
+            "file": "backend/src/services/video.service.js",
+            "lineStart": 93,
+            "lineEnd": null,
+            "symbol": "videoService"
+          },
+          "evidence": "const origin = req.headers.origin || req.headers.referer || ''; const isAllowed = origin.startsWith(env.clientUrl) || origin.includes('localhost') || origin.includes('pinggy') || origin.includes('trycloudflare'); if (origin && !isAllowed) ...",
+          "impact": "Requests omitting Origin/Referer (e.g. curl, scrapers, mobile clients) evaluate origin to empty string and bypass checks. Furthermore, origin.includes('localhost') allows domains like attacker-localhost.com.",
+          "reproduction": "Send GET /api/videos/:videoId/key with Header 'Origin: http://evil-localhost.com' or without Origin/Referer headers; request passes hotlink guard.",
+          "remediation": "Parse origin with URL parser, remove localhost/tunnel substrings from production logic, and enforce strict origin matching against env.clientUrl.",
+          "regressionTest": "Send key requests with spoofed origins (e.g. http://localhost.attacker.com) and verify rejection with 403 UNAUTHORIZED_DOMAIN.",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "id": "VID-SEC-005",
+          "module": "videos",
+          "scenario": ""
+        },
+        {
+          "fingerprint": "VID-SEC-006",
+          "title": "Unvalidated watch-event Route Allows Arbitrary Watch Seconds and Quota Corruption",
+          "severity": "HIGH",
+          "primaryCategory": "LACK OF INPUT VALIDATION",
+          "location": {
+            "file": "backend/src/routes/videos.js",
+            "lineStart": 18,
+            "lineEnd": null,
+            "symbol": "videoService"
+          },
+          "evidence": "router.post('/:videoId/watch-event', asyncHandler(c.reportWatchEvent)) does not attach validate(watchEventSchema). In VideoService.reportWatchEvent, watchedSeconds = Math.max(0, Math.floor(Number(seconds) || 0)) has no upper bound constraint for type === 'started'.",
+          "impact": "Clients can submit seconds: 1e9 to exhaust user watch quota in one request, or seconds: Infinity to inject NaN into MongoDB $inc, permanently disabling watch limit enforcement.",
+          "reproduction": "POST /api/videos/:videoId/watch-event with body { token, type: 'started', seconds: 100000000 }. WatchLog.totalWatchedSeconds increases by 100,000,000.",
+          "remediation": "Attach validate(watchEventSchema) to watch-event route, and clamp seconds to 0 in type === 'started'.",
+          "regressionTest": "Submit watch-event with seconds: 99999 and assert validation rejects request with 400 Bad Request.",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "id": "VID-SEC-006",
+          "module": "videos",
+          "scenario": ""
+        },
+        {
+          "fingerprint": "VID-SEC-007",
+          "title": "Concurrency Race Condition in reportWatchEvent Allows Double-Counting of Watch History",
+          "severity": "MEDIUM",
+          "primaryCategory": "CONCURRENCY / RACE CONDITION",
+          "location": {
+            "file": "backend/src/services/video.service.js",
+            "lineStart": 134,
+            "lineEnd": null,
+            "symbol": "videoService"
+          },
+          "evidence": "if (!session.consumed) { session.consumed = true; await session.save(); ... WatchLog.findOneAndUpdate(...) } uses in-memory check without atomic database CAS.",
+          "impact": "Concurrent requests with the same session token both observe consumed === false and execute WatchLog increment and history push multiple times.",
+          "reproduction": "Send 5 concurrent POST requests with type: 'started' using the same token. Multiple requests pass the condition and push duplicate history records.",
+          "remediation": "Execute atomic update: PlaybackSession.findOneAndUpdate({ _id: session._id, consumed: false }, { $set: { consumed: true } }) and proceed only if a document was modified.",
+          "regressionTest": "Dispatch 5 parallel 'started' watch-events with the same token and assert only 1 succeeds in recording history.",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "id": "VID-SEC-007",
+          "module": "videos",
+          "scenario": ""
+        },
+        {
+          "fingerprint": "VID-SEC-008",
+          "title": "Missing Magic Byte Verification on Raw Video Uploads",
+          "severity": "MEDIUM",
+          "primaryCategory": "UNRESTRICTED FILE UPLOAD",
+          "location": {
+            "file": "backend/src/middleware/upload.middleware.js",
+            "lineStart": 156,
+            "lineEnd": null,
+            "symbol": "videoService"
+          },
+          "evidence": "uploadRawVideo only checks path.extname(filename) and mimeType string from client headers. Unlike uploadBookFiles, it does not inspect file magic bytes.",
+          "impact": "Arbitrary non-video payloads with spoofed MIME types and .mp4 extensions are written to NVMe storage and submitted to ffprobe/ffmpeg child processes.",
+          "reproduction": "Upload text file renamed to sample.mp4 with Content-Type: video/mp4. File is accepted, stored in /tmp/uploads/, and queued to BullMQ.",
+          "remediation": "Inspect stream chunk prefix for ISO BMFF / Matroska signatures (ftyp for MP4/MOV, 0x1A45DFA3 for WebM/MKV) before streaming to disk.",
+          "regressionTest": "Upload an executable renamed to .mp4 and verify middleware rejects it with 415 Unsupported Media Type.",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "id": "VID-SEC-008",
+          "module": "videos",
+          "scenario": ""
+        },
+        {
+          "fingerprint": "VID-SEC-009",
+          "title": "Unhandled WriteStream Error in Busboy Video Upload Causes Server Process Crash",
+          "severity": "HIGH",
+          "primaryCategory": "DENIAL OF SERVICE",
+          "location": {
+            "file": "backend/src/middleware/upload.middleware.js",
+            "lineStart": 173,
+            "lineEnd": null,
+            "symbol": "videoService"
+          },
+          "evidence": "writeStream = fs.createWriteStream(rawFilePath); fileStream.pipe(writeStream); does not attach writeStream.on('error', ...). On disk full (ENOSPC), Node.js crashes with an unhandled stream error.",
+          "impact": "Uploading files when disk is near full crashes the Node.js API process, causing total service denial.",
+          "reproduction": "Simulate write error / full filesystem during uploadRawVideo. Unhandled error event on writeStream terminates Node process.",
+          "remediation": "Attach writeStream.on('error', (err) => { cleanup(err.message); next(new AppError('File write error', 500, 'IO_ERROR')); }).",
+          "regressionTest": "Emit error on writeStream and verify API responds with 500 without process termination.",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "id": "VID-SEC-009",
+          "module": "videos",
+          "scenario": ""
+        },
+        {
+          "fingerprint": "VID-SEC-010",
+          "title": "Premature Temporary Directory Deletion Prevents BullMQ Transcoding Retries",
+          "severity": "MEDIUM",
+          "primaryCategory": "RELIABILITY / FAULT TOLERANCE DEFECT",
+          "location": {
+            "file": "backend/src/workers/transcode.worker.js",
+            "lineStart": 102,
+            "lineEnd": null,
+            "symbol": "videoService"
+          },
+          "evidence": "processTranscodeJob has a finally block executing fs.rmSync(uploadDir, { recursive: true, force: true }). If step 5 (upload to MinIO) fails on attempt 1, uploadDir is deleted, causing BullMQ attempts 2 and 3 to immediately fail with file not found.",
+          "impact": "Transient worker failures (MinIO timeout, Redis hiccup) cannot be recovered by BullMQ retry mechanisms.",
+          "reproduction": "Simulate network error during MinIO upload. Attempt 1 deletes uploadDir in finally. BullMQ retries and fails with 'Raw video file not found'.",
+          "remediation": "Only delete uploadDir in finally if job succeeded or if job.attemptsMade >= job.opts.attempts.",
+          "regressionTest": "Fail attempt 1 of transcode job and verify rawFilePath remains intact for attempt 2.",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "id": "VID-SEC-010",
+          "module": "videos",
+          "scenario": ""
+        },
+        {
+          "fingerprint": "VID-SEC-011",
+          "title": "FFmpeg ABR Pipeline Fails on Videos Without Audio Tracks or Non-H.264 Codecs",
+          "severity": "MEDIUM",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "location": {
+            "file": "backend/src/services/transcode.service.js",
+            "lineStart": 111,
+            "lineEnd": null,
+            "symbol": "videoService"
+          },
+          "evidence": "Stream copy (-c:v:0 copy) breaks on VP9/ProRes because MPEG-TS container does not support VP9. Furthermore, -var_stream_map explicitly maps a:0, a:1, a:2, which crashes FFmpeg on silent videos without audio.",
+          "impact": "Silent screen captures and WebM/MKV uploads fail transcoding completely.",
+          "reproduction": "Upload silent MP4 with no audio stream. FFmpeg exits with code 1: 'Stream map a:0 matches no streams'.",
+          "remediation": "Inspect probeMetadata output; if no audio stream exists, omit audio maps from -var_stream_map. Re-encode stream 0 if codec is not h264.",
+          "regressionTest": "Transcode a silent video and verify TranscodeService completes successfully.",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "id": "VID-SEC-011",
+          "module": "videos",
+          "scenario": ""
+        },
+        {
+          "fingerprint": "VID-SEC-012",
+          "title": "Encryption Key and Storage Path Discrepancy Between HlsService and TranscodeService",
+          "severity": "MEDIUM",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "location": {
+            "file": "backend/src/services/hls.service.js",
+            "lineStart": 62,
+            "lineEnd": null,
+            "symbol": "videoService"
+          },
+          "evidence": "TranscodeService saves a random 16-byte key to video.encryptionKeyHex in MongoDB, while HlsService uses deterministic HMAC and does not set encryptionKeyHex. Re-transcoding with HlsService leaves the old encryptionKeyHex in DB while files are encrypted with the HMAC key.",
+          "impact": "Calling POST /:videoId/transcode-hls on an existing video breaks client playback permanently due to key mismatch.",
+          "reproduction": "Upload video via TranscodeService (writes encryptionKeyHex). Call POST /api/videos/:id/transcode-hls. Key returned by getVideoKey no longer decrypts stream.",
+          "remediation": "Align HlsService to use TranscodeService's key generation and storage logic, or retire HlsService in favor of TranscodeService.",
+          "regressionTest": "Re-transcode video via HlsService and assert served decryption key matches media segments.",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "id": "VID-SEC-012",
+          "module": "videos",
+          "scenario": ""
+        },
+        {
+          "fingerprint": "VID-SEC-013",
+          "title": "HTTP Headers Already Sent Exception in Realtime SSE Connection Limiter",
+          "severity": "LOW",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "location": {
+            "file": "backend/src/controllers/publicController.js",
+            "lineStart": 25,
+            "lineEnd": null,
+            "symbol": "videoService"
+          },
+          "evidence": "publicController.events flushes SSE headers and writes ': connected\\n\\n' before calling addRealtimeClient(res). Inside addRealtimeClient, if clients.size >= MAX_SSE_CLIENTS, it attempts res.status(429).json(...), triggering ERR_HTTP_HEADERS_SENT.",
+          "impact": "Server throws unhandled ERR_HTTP_HEADERS_SENT exceptions when SSE capacity is reached.",
+          "reproduction": "Open 100 SSE connections, then open connection 101. Express crashes with ERR_HTTP_HEADERS_SENT.",
+          "remediation": "Check clients.size before setting headers and writing data in publicController.events.",
+          "regressionTest": "Exceed MAX_SSE_CLIENTS and assert client 101 receives 429 without header errors.",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "id": "VID-SEC-013",
+          "module": "videos",
+          "scenario": ""
+        },
+        {
+          "fingerprint": "VID-SEC-014",
+          "title": "Missing ObjectId Validation on Video Route Parameters Leads to Unhandled Cast Errors",
+          "severity": "LOW",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "location": {
+            "file": "backend/src/routes/videos.js",
+            "lineStart": 13,
+            "lineEnd": null,
+            "symbol": "videoService"
+          },
+          "evidence": "Routes in videos.js do not validate req.params.videoId against objectIdParamSchema. Malformed parameter values trigger Mongoose CastError resulting in 500 Internal Server Error.",
+          "impact": "Triggers unhandled 500 errors and reveals database stack traces on malformed requests.",
+          "reproduction": "GET /api/videos/not-an-id/key -> returns 500 CastError.",
+          "remediation": "Add validate(objectIdParamSchema, 'params') to all parameterized routes in routes/videos.js.",
+          "regressionTest": "Send GET /api/videos/123/key and verify response is 400 Bad Request.",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "id": "VID-SEC-014",
+          "module": "videos",
+          "scenario": ""
+        }
+      ],
+      "checks": [
+        {
+          "id": "node-syntax-videos",
+          "name": "Node.js Syntax Validation",
+          "kind": "LINT",
+          "required": true,
+          "status": "PASS",
+          "scope": "backend/src/routes/videos.js",
+          "command": "node --check backend/src/routes/videos.js",
+          "exitCode": 0,
+          "note": "ES module syntax verified clean"
+        }
+      ],
+      "skillExecutions": [],
+      "coverage": {},
+      "auditRepoId": "MA-Creation",
+      "auditBranch": "main",
+      "auditCommit": "36f55fdcf2a44d01c6279a4a21b417b84d1166ba",
+      "auditRunId": "backend-swarm-baseline-20261114-final",
+      "computedVerdict": "FAIL",
+      "verdictNotes": [
+        "At least one verified open Critical/High finding exists."
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "id": "node-syntax-videos",
+      "name": "Node.js Syntax Validation",
+      "kind": "LINT",
+      "required": true,
+      "status": "PASS",
+      "scope": "backend/src/routes/videos.js",
+      "command": "node --check backend/src/routes/videos.js",
+      "exitCode": 0,
+      "note": "ES module syntax verified clean"
+    }
+  ],
+  "crossModuleFindings": []
+}

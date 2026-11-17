@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Antigravity QA Run Result",
+  "type": "object",
+  "required": ["schemaVersion", "run", "modules", "checks"],
+  "properties": {
+    "schemaVersion": {"type": "string"},
+    "run": {
+      "type": "object",
+      "required": ["id", "kind", "repo"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["module", "module-swarm", "backend-swarm", "integration", "deployment"]},
+        "title": {"type": "string"},
+        "startedAt": {"type": "string"},
+        "completedAt": {"type": "string"},
+        "repo": {"type": "object", "required": ["id", "branch", "commit"], "properties": {"id": {"type": "string", "minLength": 1}, "root": {"type": "string"}, "branch": {"type": "string", "minLength": 1}, "commit": {"type": "string", "minLength": 1}, "dirty": {"type": "boolean"}}, "additionalProperties": true},
+        "scope": {"type": "object"}
+      },
+      "additionalProperties": true
+    },
+    "checks": {"type": "array", "items": {"type": "object", "required": ["id", "status", "required"], "properties": {"id": {"type": "string"}, "name": {"type": "string"}, "kind": {"type": "string"}, "required": {"type": "boolean"}, "status": {"enum": ["PASS", "FAIL", "SKIPPED", "NOT_AVAILABLE", "BLOCKED", "RUNNING"]}, "scope": {"type": "string"}, "version": {"type": "string"}, "exitCode": {"type": ["integer", "null"]}, "note": {"type": "string"}}, "additionalProperties": true}},
+    "skillExecutions": {"type": "array", "items": {"type": "object"}},
+    "modules": {"type": "array", "items": {"type": "object", "required": ["name", "findings", "checks"], "properties": {"name": {"type": "string"}, "status": {"type": "string"}, "findings": {"type": "array", "items": {"type": "object"}}, "checks": {"type": "array", "items": {"type": "object"}}, "skillExecutions": {"type": "array"}, "testMatrix": {"type": "array"}, "coverage": {"type": "object"}}, "additionalProperties": true}},
+    "crossModuleFindings": {"type": "array", "items": {"type": "object"}},
+    "notes": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,232 @@
+{
+  "schemaVersion": "1.0",
+  "run": {
+    "id": "run-supplychain-baseline",
+    "kind": "supply-chain",
+    "title": "Backend Supply Chain and Dependency Audit",
+    "startedAt": "2026-11-14T16:25:00.000Z",
+    "completedAt": "2026-11-14T16:34:00.000Z",
+    "repo": {
+      "root": ".",
+      "scope": "backend/package.json, backend/package-lock.json"
+    }
+  },
+  "checks": [
+    {
+      "id": "supplychain-npm-ls",
+      "name": "npm-ls-integrity-validation",
+      "kind": "LINT",
+      "required": true,
+      "status": "FAIL",
+      "scope": "backend",
+      "version": "npm 10.x",
+      "command": "npm ls",
+      "exitCode": 1,
+      "note": "7 dependencies marked invalid due to desynchronization between package.json pinned declarations and package-lock.json resolved versions."
+    },
+    {
+      "id": "supplychain-npm-audit",
+      "name": "npm-audit-offline-check",
+      "kind": "SCANNER",
+      "required": false,
+      "status": "BLOCKED",
+      "scope": "backend",
+      "command": "npm audit --audit-level=low --json",
+      "exitCode": 1,
+      "note": "Sandbox network isolation blocked remote registry access; evaluated offline through dependency graph and package-lock analysis."
+    },
+    {
+      "id": "supplychain-install-scripts-audit",
+      "name": "package-lock-lifecycle-scripts-scanner",
+      "kind": "SCANNER",
+      "required": true,
+      "status": "PASS",
+      "scope": "backend/package-lock.json",
+      "version": "Node v20 AST/JSON scanner",
+      "command": "node inspect-install-scripts",
+      "exitCode": 0,
+      "note": "Discovered 3 packages with install scripts: @scarf/scarf (telemetry), argon2 (native compile), msgpackr-extract (native compile)."
+    },
+    {
+      "id": "supplychain-license-compliance-audit",
+      "name": "license-spdx-conformance-check",
+      "kind": "SCANNER",
+      "required": true,
+      "status": "PASS",
+      "scope": "backend/package-lock.json",
+      "version": "Node v20 scanner",
+      "command": "node inspect-licenses",
+      "exitCode": 0,
+      "note": "264 packages analyzed: 221 MIT, 12 Apache-2.0, 10 ISC, 7 BlueOak-1.0.0, 8 BSD, 1 FSL-1.1-Apache-2.0 (sentry), 3 undefined legacy licenses (busboy, async, streamsearch)."
+    },
+    {
+      "id": "supplychain-scripts-audit",
+      "name": "package-json-scripts-audit",
+      "kind": "LINT",
+      "required": true,
+      "status": "PASS",
+      "scope": "backend/package.json",
+      "command": "node inspect-scripts",
+      "exitCode": 0,
+      "note": "Verified 10 package scripts. Standard test, lint, and typecheck scripts are missing."
+    }
+  ],
+  "findings": [
+    {
+      "id": "SUPPLY-CHAIN-001",
+      "fingerprint": "backend:pkg-lock:mismatch-pinned-versions",
+      "title": "Package-lock.json Desynchronization with package.json (Breaks CI npm ci and Build Reproducibility)",
+      "primaryCategory": "CONFIG_DEPLOY_DEFECT",
+      "severity": "HIGH",
+      "confidence": "HIGH",
+      "verification": "VERIFIED",
+      "lifecycle": "NEW",
+      "triage": "OPEN",
+      "location": {
+        "file": "backend/package.json",
+        "lineStart": 24,
+        "lineEnd": 38,
+        "symbol": "dependencies"
+      },
+      "evidence": "npm ls exits with code 1 (ELSPROBLEMS). 7 dependencies have mismatched versions: cors (2.8.5 declared vs 2.8.6 resolved), dotenv (16.4.7 vs 16.6.1), express (5.1.0 vs 5.2.1), helmet (8.1.0 vs 8.3.0), mongoose (8.18.0 vs 8.24.9), razorpay (2.9.6 vs 2.9.8), zod (4.6.5 vs 4.6.7).",
+      "scenario": "When building backend/Dockerfile via 'npm ci --omit=dev', npm ci verifies package-lock.json against package.json. Because package.json pins older versions, npm ci encounters invalid dependencies, breaking reproducible builds in clean CI pipelines.",
+      "impact": "Broken deployment and container builds in CI/CD; drift between local and containerized dependency trees.",
+      "reproduction": "Execute 'npm ls' in backend directory; fails with code 1 and 7 ELSPROBLEMS invalid packages.",
+      "remediation": "Synchronize package.json and package-lock.json. Update package.json to reflect tested versions or run 'npm install --package-lock-only'.",
+      "regressionTest": "Add CI pre-build verification executing 'npm ls' and 'npm ci --dry-run' asserting exit code 0.",
+      "discoveredByTest": false,
+      "sourceAgents": ["repo-supplychain"],
+      "sourceSkills": ["audit-backend-swarm", "ponytail-sec-audit"]
+    },
+    {
+      "id": "SUPPLY-CHAIN-002",
+      "fingerprint": "backend:pkg-lock:scarf-telemetry-egress",
+      "title": "Third-Party Telemetry & Network Egress via Install Script (@scarf/scarf in swagger-ui-dist)",
+      "primaryCategory": "SECURITY_DEFECT",
+      "severity": "MEDIUM",
+      "confidence": "HIGH",
+      "verification": "VERIFIED",
+      "lifecycle": "NEW",
+      "triage": "OPEN",
+      "location": {
+        "file": "backend/package-lock.json",
+        "lineStart": 0,
+        "lineEnd": 0,
+        "symbol": "node_modules/@scarf/scarf"
+      },
+      "evidence": "node_modules/@scarf/scarf v1.4.0 (dependency of swagger-ui-dist) declares hasInstallScript: true. Its postinstall script executes 'node ./report.js', which sends telemetry to gateway.scarf.sh.",
+      "scenario": "During package installation on developer machines or CI/CD runners, Scarf transmits package name, host OS, Node.js version, and runner IP address to an external commercial service.",
+      "impact": "Build-host metadata and network origin disclosure; non-compliance with strict airgap/zero-trust data isolation requirements.",
+      "reproduction": "Inspect backend/node_modules/@scarf/scarf/report.js lines 4-13 and lines 57-64.",
+      "remediation": "Set ENV SCARF_ANALYTICS=false and DO_NOT_TRACK=1 in Dockerfile and CI environments, or use npm ci --ignore-scripts in production containers.",
+      "regressionTest": "Assert Dockerfile and CI workflow set SCARF_ANALYTICS=false.",
+      "discoveredByTest": false,
+      "sourceAgents": ["repo-supplychain"],
+      "sourceSkills": ["audit-backend-swarm", "ponytail-sec-audit"]
+    },
+    {
+      "id": "SUPPLY-CHAIN-003",
+      "fingerprint": "backend:deps:fluent-ffmpeg-abandoned-maintainer",
+      "title": "Unmaintained Upstream Dependency fluent-ffmpeg 2.1.3 Executing Subprocesses",
+      "primaryCategory": "SECURITY_DEFECT",
+      "severity": "MEDIUM",
+      "confidence": "HIGH",
+      "verification": "VERIFIED",
+      "lifecycle": "NEW",
+      "triage": "OPEN",
+      "location": {
+        "file": "backend/package.json",
+        "lineStart": 28,
+        "lineEnd": 28,
+        "symbol": "dependencies.fluent-ffmpeg"
+      },
+      "evidence": "backend/package.json pins fluent-ffmpeg 2.1.3. Upstream project has been unmaintained for several years and relies on legacy async ^0.2.9.",
+      "scenario": "transcode.service.js and hls.service.js use fluent-ffmpeg to spawn FFmpeg processes. If input parameters or filter options contain unvalidated user input, process execution flaws or argument injection risks remain unpatched.",
+      "impact": "Unpatched subprocess execution risk and long-term maintenance liability.",
+      "reproduction": "Inspect backend/node_modules/fluent-ffmpeg/package.json dependencies and repository commit history.",
+      "remediation": "Replace fluent-ffmpeg with direct, modern child_process.execFile or execa calls using strict parameterized argument vectors.",
+      "regressionTest": "Add test case asserting video filenames with shell metacharacters and semicolons are rejected before FFmpeg spawn.",
+      "discoveredByTest": false,
+      "sourceAgents": ["repo-supplychain"],
+      "sourceSkills": ["audit-backend-swarm", "ponytail-sec-audit"]
+    },
+    {
+      "id": "SUPPLY-CHAIN-004",
+      "fingerprint": "backend:package.json:missing-test-quality-scripts",
+      "title": "Missing Standard Quality Gate Scripts (test, lint, typecheck) in package.json",
+      "primaryCategory": "CONFIG_DEPLOY_DEFECT",
+      "severity": "LOW",
+      "confidence": "HIGH",
+      "verification": "VERIFIED",
+      "lifecycle": "NEW",
+      "triage": "OPEN",
+      "location": {
+        "file": "backend/package.json",
+        "lineStart": 6,
+        "lineEnd": 17,
+        "symbol": "scripts"
+      },
+      "evidence": "backend/package.json contains no 'test', 'lint', or 'typecheck' scripts. Only 'check' (node --check) and k6 scripts exist.",
+      "scenario": "Automated pipelines executing 'npm test' fail immediately with 'Missing script: test', preventing pre-merge automated testing.",
+      "impact": "Defects bypass standard CI/CD verification phases.",
+      "reproduction": "Execute 'npm test' in backend directory; returns exit code 1.",
+      "remediation": "Add standard 'test', 'lint', and 'check' scripts in backend/package.json.",
+      "regressionTest": "Execute 'npm test' and verify it runs automated unit/integration tests.",
+      "discoveredByTest": false,
+      "sourceAgents": ["repo-supplychain"],
+      "sourceSkills": ["audit-backend-swarm"]
+    },
+    {
+      "id": "SUPPLY-CHAIN-005",
+      "fingerprint": "backend:deps:busboy-legacy-spdx-metadata",
+      "title": "Legacy Metadata and Single-Maintainer Risk for Streaming Multipart Parser (busboy 1.6.0)",
+      "primaryCategory": "CONFIG_DEPLOY_DEFECT",
+      "severity": "LOW",
+      "confidence": "HIGH",
+      "verification": "VERIFIED",
+      "lifecycle": "NEW",
+      "triage": "OPEN",
+      "location": {
+        "file": "backend/package.json",
+        "lineStart": 22,
+        "lineEnd": 22,
+        "symbol": "dependencies.busboy"
+      },
+      "evidence": "busboy@1.6.0 uses legacy non-SPDX 'licenses: [{ type: \"MIT\" }]' property, leaving 'license: undefined' in modern npm lockfiles.",
+      "scenario": "Enterprise automated compliance scanners flag busboy as missing license terms during compliance gates.",
+      "impact": "Compliance blocker during enterprise audits; bus factor risk on streaming multipart uploads.",
+      "reproduction": "Inspect backend/package-lock.json entry for node_modules/busboy.",
+      "remediation": "Configure license scanner override for busboy MIT license or monitor for modern SPDX-compliant releases.",
+      "regressionTest": "Run license verification asserting busboy resolves under MIT terms.",
+      "discoveredByTest": false,
+      "sourceAgents": ["repo-supplychain"],
+      "sourceSkills": ["audit-backend-swarm"]
+    },
+    {
+      "id": "SUPPLY-CHAIN-006",
+      "fingerprint": "backend:deps:native-build-attack-surface",
+      "title": "Native Build Toolchain and Execution Surface (argon2 and msgpackr-extract)",
+      "primaryCategory": "SECURITY_DEFECT",
+      "severity": "LOW",
+      "confidence": "HIGH",
+      "verification": "VERIFIED",
+      "lifecycle": "NEW",
+      "triage": "OPEN",
+      "location": {
+        "file": "backend/package-lock.json",
+        "lineStart": 0,
+        "lineEnd": 0,
+        "symbol": "node_modules/argon2,node_modules/msgpackr-extract"
+      },
+      "evidence": "argon2 (0.45.1) and msgpackr-extract (3.0.4) specify hasInstallScript: true, running C++ build tools during installation.",
+      "scenario": "Arbitrary code execution during install if upstream tarballs are modified or hashes unverified. Requires temporary C++ compilers in Dockerfile.",
+      "impact": "Expanded build-stage attack surface.",
+      "reproduction": "Check hasInstallScript in package-lock.json for argon2 and msgpackr-extract.",
+      "remediation": "Ensure Dockerfile continues to isolate and purge virtual build tools, and enforce strict sha512 integrity verification.",
+      "regressionTest": "Verify production container image contains no gcc, g++, or make.",
+      "discoveredByTest": false,
+      "sourceAgents": ["repo-supplychain"],
+      "sourceSkills": ["audit-backend-swarm", "ponytail-sec-audit"]
+    }
+  ]
+}

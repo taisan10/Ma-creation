@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import Header from './components/Header'
@@ -64,6 +65,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <div className="min-h-screen flex flex-col">
+       
         <ScrollToHash />
         {!isAdmin && <Header revision={revision} />}
         <main className="flex-1">

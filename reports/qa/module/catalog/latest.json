@@ -1,0 +1,619 @@
+{
+  "schemaVersion": "1.0",
+  "run": {
+    "id": "backend-swarm-baseline-20261114-final",
+    "kind": "backend-swarm",
+    "title": "MA-Creation Backend Baseline Swarm Audit",
+    "startedAt": "2026-11-14T10:45:00Z",
+    "completedAt": "2026-11-14T11:15:00Z",
+    "repo": {
+      "id": "MA-Creation",
+      "root": ".",
+      "branch": "main",
+      "commit": "36f55fdcf2a44d01c6279a4a21b417b84d1166ba",
+      "dirty": true
+    },
+    "scope": {
+      "modules": [
+        "auth",
+        "videos",
+        "payments",
+        "courses",
+        "admin",
+        "catalog",
+        "books",
+        "leads"
+      ],
+      "filesInspected": [
+        "backend/src/routes/auth.js",
+        "backend/src/routes/videos.js",
+        "backend/src/routes/payments.js",
+        "backend/src/routes/courses.js",
+        "backend/src/routes/admin.js",
+        "backend/src/routes/adminLms.js",
+        "backend/src/routes/catalog.js",
+        "backend/src/routes/public.js",
+        "backend/src/routes/books.js",
+        "backend/src/routes/leads.js",
+        "backend/src/app.js",
+        "backend/src/server.js"
+      ],
+      "filesExcluded": [
+        "node_modules/**",
+        "frontend/dist/**"
+      ],
+      "sharedDependencies": [
+        "express",
+        "mongoose",
+        "ioredis",
+        "bullmq",
+        "minio",
+        "razorpay",
+        "argon2",
+        "jsonwebtoken",
+        "zod",
+        "helmet",
+        "cors"
+      ]
+    }
+  },
+  "modules": [
+    {
+      "name": "catalog",
+      "status": "FAIL",
+      "scope": {
+        "files": [
+          "backend/src/routes/catalog.js",
+          "backend/src/routes/public.js",
+          "backend/src/controllers/catalogController.js",
+          "backend/src/controllers/publicController.js",
+          "backend/src/services/catalog.service.js",
+          "backend/src/services/public.service.js",
+          "backend/src/models/CMS/FAQ.js",
+          "backend/src/models/CMS/Page.js",
+          "backend/src/models/CMS/Partner.js",
+          "backend/src/models/CMS/Plan.js",
+          "backend/src/models/CMS/Service.js",
+          "backend/src/models/CMS/SiteSettings.js",
+          "backend/src/services/realtime.js"
+        ],
+        "sharedDependencies": [
+          "backend/src/app.js",
+          "backend/src/services/admin.service.js",
+          "backend/src/routes/admin.js",
+          "backend/src/services/payment.service.js",
+          "backend/src/scripts/ensure-indexes.js",
+          "backend/src/scripts/diagnose-db-scans.js",
+          "frontend/src/lib/realtime.js",
+          "frontend/src/pages/plans/PlansPage.jsx"
+        ],
+        "excluded": []
+      },
+      "testMatrix": [
+        {
+          "endpoint": "GET /api/catalog/services",
+          "description": "Public active services listing sorted by category and price",
+          "status": "MISSING",
+          "reason": "No automated test suite in backend"
+        },
+        {
+          "endpoint": "GET /api/catalog/plans",
+          "description": "Public active plans listing sorted by category and price",
+          "status": "MISSING",
+          "reason": "No automated test suite in backend"
+        },
+        {
+          "endpoint": "GET /api/public/pages/:slug",
+          "description": "Fetch published CMS page content by slug",
+          "status": "MISSING",
+          "reason": "No automated test suite in backend"
+        },
+        {
+          "endpoint": "GET /api/public/pages/:slug (unpublished/draft)",
+          "description": "Ensure unpublished pages (published: false) return 404",
+          "status": "MISSING",
+          "reason": "No automated test suite in backend"
+        },
+        {
+          "endpoint": "GET /api/public/faqs",
+          "description": "List active FAQs sorted by order and createdAt",
+          "status": "MISSING",
+          "reason": "No automated test suite in backend"
+        },
+        {
+          "endpoint": "GET /api/public/partners",
+          "description": "List active partners sorted by order and createdAt",
+          "status": "MISSING",
+          "reason": "No automated test suite in backend"
+        },
+        {
+          "endpoint": "GET /api/public/settings/:key",
+          "description": "Fetch public site settings for brand and theme",
+          "status": "MISSING",
+          "reason": "No automated test suite in backend"
+        },
+        {
+          "endpoint": "GET /api/public/settings/:key (unauthorized key)",
+          "description": "Reject non-whitelisted settings keys with 404",
+          "status": "MISSING",
+          "reason": "No automated test suite in backend"
+        },
+        {
+          "endpoint": "GET /api/public/events",
+          "description": "SSE text/event-stream connection and initial keepalive",
+          "status": "MISSING",
+          "reason": "No automated test suite in backend"
+        },
+        {
+          "endpoint": "GET /api/public/events (concurrency limit)",
+          "description": "Capacity enforcement at MAX_SSE_CLIENTS without ERR_HTTP_HEADERS_SENT",
+          "status": "MISSING",
+          "reason": "No automated test suite in backend"
+        },
+        {
+          "endpoint": "GET /api/public/events (rate limiting & per-IP cap)",
+          "description": "Per-IP connection capping and DoS rate limit protection",
+          "status": "MISSING",
+          "reason": "No automated test suite in backend"
+        },
+        {
+          "endpoint": "GET /api/public/events (lifetime termination)",
+          "description": "Graceful stream end (res.end) on MAX_SSE_LIFETIME_MS expiration",
+          "status": "MISSING",
+          "reason": "No automated test suite in backend"
+        }
+      ],
+      "coverage": {
+        "line": 0,
+        "branch": 0,
+        "function": 0,
+        "statement": 0,
+        "source": "No automated test runner configured in backend/package.json"
+      },
+      "checks": [
+        {
+          "id": "syntax-check-catalog-routes",
+          "name": "node --check",
+          "kind": "LINT",
+          "required": true,
+          "status": "PASS",
+          "scope": "backend/src/routes/catalog.js",
+          "exitCode": 0,
+          "note": "Syntax verification passed"
+        },
+        {
+          "id": "syntax-check-public-routes",
+          "name": "node --check",
+          "kind": "LINT",
+          "required": true,
+          "status": "PASS",
+          "scope": "backend/src/routes/public.js",
+          "exitCode": 0,
+          "note": "Syntax verification passed"
+        },
+        {
+          "id": "syntax-check-catalog-controllers",
+          "name": "node --check",
+          "kind": "LINT",
+          "required": true,
+          "status": "PASS",
+          "scope": "backend/src/controllers/catalogController.js",
+          "exitCode": 0,
+          "note": "Syntax verification passed"
+        },
+        {
+          "id": "syntax-check-public-controllers",
+          "name": "node --check",
+          "kind": "LINT",
+          "required": true,
+          "status": "PASS",
+          "scope": "backend/src/controllers/publicController.js",
+          "exitCode": 0,
+          "note": "Syntax verification passed"
+        },
+        {
+          "id": "syntax-check-catalog-services",
+          "name": "node --check",
+          "kind": "LINT",
+          "required": true,
+          "status": "PASS",
+          "scope": "backend/src/services/catalog.service.js",
+          "exitCode": 0,
+          "note": "Syntax verification passed"
+        },
+        {
+          "id": "syntax-check-public-services",
+          "name": "node --check",
+          "kind": "LINT",
+          "required": true,
+          "status": "PASS",
+          "scope": "backend/src/services/public.service.js",
+          "exitCode": 0,
+          "note": "Syntax verification passed"
+        },
+        {
+          "id": "syntax-check-cms-models",
+          "name": "node --check",
+          "kind": "LINT",
+          "required": true,
+          "status": "PASS",
+          "scope": "backend/src/models/CMS/*.js",
+          "exitCode": 0,
+          "note": "Syntax verification passed across all 6 CMS models"
+        },
+        {
+          "id": "automated-tests-catalog",
+          "name": "catalog-unit-tests",
+          "kind": "TEST",
+          "required": true,
+          "status": "NOT_AVAILABLE",
+          "scope": "backend/src/routes/catalog.js",
+          "exitCode": null,
+          "note": "No test runner configured in backend"
+        }
+      ],
+      "skillExecutions": [
+        {
+          "name": "audit-module",
+          "installedPath": ".agents/skills/audit-module/SKILL.md",
+          "status": "EXECUTED",
+          "scope": "catalog"
+        },
+        {
+          "name": "security-audit",
+          "installedPath": "C:\\Users\\Asus\\.gemini\\config\\skills\\security-audit\\SKILL.md",
+          "status": "EXECUTED",
+          "scope": "catalog"
+        }
+      ],
+      "findings": [
+        {
+          "id": "CATALOG-SSE-HEADERS-SENT",
+          "fingerprint": "backend-public-sse-headers-sent-crash-on-capacity",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "severity": "HIGH",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Unhandled ERR_HTTP_HEADERS_SENT Server Exception in SSE Endpoint When Connection Limit Is Exceeded",
+          "location": {
+            "file": "backend/src/controllers/publicController.js",
+            "lineStart": 24,
+            "lineEnd": 33,
+            "symbol": "events"
+          },
+          "evidence": "events() in publicController.js sets res.status(200), flushes headers, and writes ': connected\\n\\n' BEFORE invoking addRealtimeClient(res). When clients.size >= MAX_SSE_CLIENTS (100), addRealtimeClient attempts res.status(429).json({ success: false, message: 'Too many connections' }), triggering an unhandled 'Error [ERR_HTTP_HEADERS_SENT]: Cannot set headers after they are sent to the client'.",
+          "scenario": "Under normal web traffic when 100 clients are connected to SSE, user 101 connecting triggers an uncaught ERR_HTTP_HEADERS_SENT exception. Client reconnection loops exacerbate the issue, repeatedly throwing unhandled exceptions in the Node HTTP server pipeline.",
+          "impact": "Server instability, error logging spikes, Sentry alert flooding, broken client connection state, and complete failure to communicate rate limiting to overflowing clients.",
+          "reproduction": "Simulate 100 concurrent SSE connections to /api/public/events. On the 101st request, observe the Node.js server throw ERR_HTTP_HEADERS_SENT when attempting to set status 429.",
+          "remediation": "Check capacity (clients.size >= MAX_SSE_CLIENTS) in events() BEFORE setting HTTP 200 headers. If at capacity, immediately return res.status(429).json(...) before stream headers are written. In routes/public.js, wrap events in asyncHandler, and in middleware/error.js ensure res.headersSent is checked before attempting error serialization.",
+          "regressionTest": "Mock clients.size = 100 and issue a GET request to /api/public/events. Assert response status is 429 and no ERR_HTTP_HEADERS_SENT exception is thrown.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-catalog-lead"
+          ],
+          "sourceSkills": [
+            "audit-module",
+            "security-audit"
+          ],
+          "module": "catalog"
+        },
+        {
+          "id": "CATALOG-SSE-CONNECTION-STARVATION",
+          "fingerprint": "backend-public-sse-dos-connection-starvation-rate-limit-bypass",
+          "primaryCategory": "SECURITY_DOS",
+          "severity": "HIGH",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Complete Denial of Realtime Updates via Global Rate Limit Bypass and Uncapped Per-IP SSE Connections",
+          "location": {
+            "file": "backend/src/app.js",
+            "lineStart": 79,
+            "lineEnd": 84,
+            "symbol": "app.use(rateLimit)"
+          },
+          "evidence": "In backend/src/app.js, express-rate-limit explicitly skips /api/public/events via skip: (req) => ... req.path === '/api/public/events'. There is no per-IP connection limit, no IP-based rate limiting on /api/public/events, and no authentication required.",
+          "scenario": "An unauthenticated remote attacker or misconfigured client opens 100 parallel EventSource connections from a single IP. All 100 connections are accepted and occupy every slot up to MAX_SSE_CLIENTS = 100.",
+          "impact": "Total denial of service for the realtime update subsystem. Every other user across the entire platform is blocked from receiving live CMS updates, and any new visitor triggers the ERR_HTTP_HEADERS_SENT exception.",
+          "reproduction": "Script 100 concurrent GET requests from a single client IP to /api/public/events. All 100 are accepted without rate limiting, holding all server SSE slots.",
+          "remediation": "Implement per-IP connection limits (e.g., maximum 3-5 concurrent SSE connections per client IP) and apply a dedicated rate limiter (e.g., max 10 connection attempts per 5 minutes) on /api/public/events.",
+          "regressionTest": "Attempt 6 concurrent SSE connections from a single IP address. Assert that connections exceeding the per-IP threshold are rejected with HTTP 429.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-catalog-lead"
+          ],
+          "sourceSkills": [
+            "audit-module",
+            "security-audit"
+          ],
+          "module": "catalog"
+        },
+        {
+          "id": "CATALOG-SSE-SOCKET-LEAK",
+          "fingerprint": "backend-realtime-sse-socket-leak-on-lifetime-expiration",
+          "primaryCategory": "RESOURCE_LEAK",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Socket and File Descriptor Leak Due to Missing res.end() on SSE Lifetime Expiration",
+          "location": {
+            "file": "backend/src/services/realtime.js",
+            "lineStart": 16,
+            "lineEnd": 24,
+            "symbol": "addRealtimeClient"
+          },
+          "evidence": "In realtime.js, const cleanup = () => { clearInterval(heartbeat); clearTimeout(lifetime); clients.delete(res); }. When the 1-hour MAX_SSE_LIFETIME_MS timeout triggers, cleanup() removes the client from clients and clears timers, but never calls res.end() or destroys the socket.",
+          "scenario": "When long-running clients remain connected past 1 hour, heartbeats cease, but the underlying TCP connection and Node response stream remain open indefinitely in memory.",
+          "impact": "Gradual socket, memory, and file descriptor leakage on the server, eventually degrading OS network resources.",
+          "reproduction": "Temporarily set MAX_SSE_LIFETIME_MS to 1000ms. Open an SSE connection. After 1s, verify client is removed from clients set, but the TCP socket remains in ESTABLISHED state without FIN packet being sent.",
+          "remediation": "In cleanup(), explicitly call if (!res.writableEnded) { res.end(); } to terminate the HTTP response stream when lifetime expires.",
+          "regressionTest": "Trigger the lifetime expiration timer and assert that res.writableEnded becomes true and socket terminates.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-catalog-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "module": "catalog"
+        },
+        {
+          "id": "CATALOG-UNPUBLISHED-PLANS-LEAKAGE",
+          "fingerprint": "backend-catalog-plans-unrestricted-exposure-draft-internal",
+          "primaryCategory": "DATA_LEAKAGE",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Unrestricted Public Exposure and Gated Bypass of Draft, Internal, and Bespoke Enterprise Plans",
+          "location": {
+            "file": "backend/src/models/CMS/Plan.js",
+            "lineStart": 1,
+            "lineEnd": 3,
+            "symbol": "PlanSchema"
+          },
+          "evidence": "Plan.js schema defines only active: { type: Boolean, default: true } without isPublic, published, or isDraft. CatalogService.getActivePlans() queries Plan.find({ active: true }). PaymentService.createOrder allows purchase of any Plan.findOne({ _id: planId, active: true }).",
+          "scenario": "An admin creates a custom corporate plan, draft pricing experiment, or internal test tier. Because it defaults to active: true, it immediately appears in the public /api/catalog/plans feed and becomes purchasable by any authenticated user via /api/payments/order.",
+          "impact": "Business and pricing logic leakage, unintended public purchase of internal or negotiated enterprise contracts, and inability to stage plans in draft mode.",
+          "reproduction": "Insert a plan with custom negotiated rates for a specific client. Query GET /api/catalog/plans; verify the custom negotiated plan is returned in the public catalog.",
+          "remediation": "Add isPublic: { type: Boolean, default: true } and isDraft: { type: Boolean, default: false } to Plan.js. Filter by { active: true, isPublic: true, isDraft: false } in CatalogService.getActivePlans(), and validate entitlement eligibility in PaymentService.",
+          "regressionTest": "Create a plan with active: true, isPublic: false. Query GET /api/catalog/plans and assert the plan is omitted.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-catalog-lead"
+          ],
+          "sourceSkills": [
+            "audit-module",
+            "security-audit"
+          ],
+          "module": "catalog"
+        },
+        {
+          "id": "CATALOG-COLLSCAN-MISSING-INDEXES",
+          "fingerprint": "backend-cms-missing-compound-indexes-collscan",
+          "primaryCategory": "PERFORMANCE",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "High-Concurrency Database Bottleneck: Missing Compound Indexes on All CMS Collections (COLLSCAN)",
+          "location": {
+            "file": "backend/src/models/CMS/Service.js",
+            "lineStart": 1,
+            "lineEnd": 3,
+            "symbol": "ServiceSchema"
+          },
+          "evidence": "Queries executed on public routes: Service.find({ active: true }).sort({ category: 1, price: 1 }), Plan.find({ active: true }).sort({ category: 1, price: 1 }), FAQ.find({ active: true }).sort({ order: 1, createdAt: 1 }), Partner.find({ active: true }).sort({ order: 1, createdAt: 1 }). None of these collections define compound indexes matching their filter and sort keys. ensure-indexes.js omitted CMS collections entirely.",
+          "scenario": "High-traffic bursts on the public homepage or pricing page cause simultaneous unindexed collection scans and memory sort operations across all CMS collections.",
+          "impact": "Elevated MongoDB CPU usage, slow response times, and degraded throughput under public traffic spikes.",
+          "reproduction": "Run explain('executionStats') on Service.find({ active: true }).sort({ category: 1, price: 1 }). Verify executionStages.stage is COLLSCAN followed by in-memory SORT.",
+          "remediation": "Add schema indexes: Service.index({ active: 1, category: 1, price: 1 }), Plan.index({ active: 1, category: 1, price: 1 }), FAQ.index({ active: 1, order: 1, createdAt: 1 }), Partner.index({ active: 1, order: 1, createdAt: 1 }). Update ensure-indexes.js.",
+          "regressionTest": "Execute explain('executionStats') and assert query plan utilizes IXSCAN with 0 documents examined outside the index.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-catalog-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "module": "catalog"
+        },
+        {
+          "id": "CATALOG-SSE-INTERNAL-METADATA-LEAK",
+          "fingerprint": "backend-realtime-broadcast-internal-id-leakage",
+          "primaryCategory": "DATA_LEAKAGE",
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Internal MongoDB ObjectIds and Administrative Activity Broadcast to Anonymous Public SSE Listeners",
+          "location": {
+            "file": "backend/src/services/realtime.js",
+            "lineStart": 28,
+            "lineEnd": 35,
+            "symbol": "broadcastCmsUpdate"
+          },
+          "evidence": "broadcastCmsUpdate broadcasts key: String(item._id) along with resource and action ('created', 'updated', 'deleted') to all connected public /api/public/events clients. This occurs even when draft resources or unpublished pages are created or modified.",
+          "scenario": "An anonymous observer maintains an open EventSource connection to /api/public/events and records real-time notifications revealing internal database ObjectIds, admin creation timing, and unpublished resource identifiers.",
+          "impact": "Reconnaissance information disclosure; leaks database internal identifiers and operational patterns to unauthenticated users.",
+          "reproduction": "Listen to /api/public/events with curl. Create a page in admin. Observe the received SSE payload contains the raw MongoDB ObjectId.",
+          "remediation": "Sanitize the broadcast payload to emit only resource category invalidation signals (e.g. { resource: 'plans', action: 'updated', timestamp: '...' }) without leaking internal MongoDB ObjectIds.",
+          "regressionTest": "Trigger broadcastCmsUpdate({ resource: 'pages', key: '507f1f77bcf86cd799439011' }). Assert message payload does not expose raw database IDs to public consumers.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-catalog-lead"
+          ],
+          "sourceSkills": [
+            "audit-module",
+            "security-audit"
+          ],
+          "module": "catalog"
+        },
+        {
+          "id": "CATALOG-MISSING-CACHE-CONTROLS",
+          "fingerprint": "backend-catalog-missing-http-cache-headers-caching",
+          "primaryCategory": "PERFORMANCE",
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Missing HTTP Cache-Control and In-Memory/Redis Caching on Public CMS and Catalog Endpoints",
+          "location": {
+            "file": "backend/src/controllers/catalogController.js",
+            "lineStart": 3,
+            "lineEnd": 11,
+            "symbol": "listServices, listPlans"
+          },
+          "evidence": "Compare bookController.js:13 (Cache-Control: public, max-age=3600...) with catalogController.js and publicController.js: zero caching headers (Cache-Control, ETag, Last-Modified) are sent on /api/catalog/services, /api/catalog/plans, /api/public/faqs, /api/public/partners, /api/public/settings/:key, or /api/public/pages/:slug. Furthermore, no in-memory or Redis caching layer is implemented despite having Redis and realtime event invalidations.",
+          "scenario": "Every request from every client or CDN edge results in a fresh database query for static content that rarely changes.",
+          "impact": "Unnecessary database load and higher TTFB for landing page visitors.",
+          "reproduction": "Request GET /api/catalog/plans. Check response headers; observe absence of Cache-Control and ETag.",
+          "remediation": "Add Cache-Control: public, max-age=300, stale-while-revalidate=3600 on public catalog and CMS endpoints, or cache serialized results in Redis invalidated via broadcastCmsUpdate.",
+          "regressionTest": "Send GET request to /api/catalog/plans. Assert Cache-Control header is present with public cache directives.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-catalog-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "module": "catalog"
+        },
+        {
+          "id": "CATALOG-INPUT-VALIDATION-MISSING",
+          "fingerprint": "backend-public-missing-slug-and-input-validation",
+          "primaryCategory": "SECURITY_DEFECT",
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Missing Input Validation Schemas and Unbounded Queries on Public CMS Route Parameters",
+          "location": {
+            "file": "backend/src/routes/public.js",
+            "lineStart": 4,
+            "lineEnd": 4,
+            "symbol": "getPage"
+          },
+          "evidence": "There are no validator files (catalog.validator.js and public.validator.js do not exist). req.params.slug in /api/public/pages/:slug has no format or length validation, and queries in catalog.service.js and public.service.js lack .limit() or pagination.",
+          "scenario": "Oversized or malformed parameters are passed directly to database queries, and unbounded queries return all records without limit.",
+          "impact": "Input validation gap; potential query resource consumption if collections grow large.",
+          "reproduction": "Send GET request to /api/public/pages/ with an oversized 10,000-character parameter string. Request reaches MongoDB query directly without route rejection.",
+          "remediation": "Implement Zod validator middleware for public routes validating slug format ^[a-z0-9-]+$ (max 100 characters) and add reasonable default limits (e.g. .limit(100)) on collection queries.",
+          "regressionTest": "Send GET request to /api/public/pages/invalid*slug!. Assert request is rejected with 400 ZOD_VALIDATION_ERROR.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-catalog-lead"
+          ],
+          "sourceSkills": [
+            "audit-module",
+            "security-audit"
+          ],
+          "module": "catalog"
+        }
+      ],
+      "slug": "catalog",
+      "auditRepoId": "MA-Creation",
+      "auditBranch": "main",
+      "auditCommit": "36f55fdcf2a44d01c6279a4a21b417b84d1166ba",
+      "auditRunId": "backend-swarm-baseline-20261114-final",
+      "computedVerdict": "FAIL",
+      "verdictNotes": [
+        "At least one required check was skipped, unavailable, blocked or still running.",
+        "At least one verified open Critical/High finding exists."
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "id": "syntax-check-catalog-routes",
+      "name": "node --check",
+      "kind": "LINT",
+      "required": true,
+      "status": "PASS",
+      "scope": "backend/src/routes/catalog.js",
+      "exitCode": 0,
+      "note": "Syntax verification passed"
+    },
+    {
+      "id": "syntax-check-public-routes",
+      "name": "node --check",
+      "kind": "LINT",
+      "required": true,
+      "status": "PASS",
+      "scope": "backend/src/routes/public.js",
+      "exitCode": 0,
+      "note": "Syntax verification passed"
+    },
+    {
+      "id": "syntax-check-catalog-controllers",
+      "name": "node --check",
+      "kind": "LINT",
+      "required": true,
+      "status": "PASS",
+      "scope": "backend/src/controllers/catalogController.js",
+      "exitCode": 0,
+      "note": "Syntax verification passed"
+    },
+    {
+      "id": "syntax-check-public-controllers",
+      "name": "node --check",
+      "kind": "LINT",
+      "required": true,
+      "status": "PASS",
+      "scope": "backend/src/controllers/publicController.js",
+      "exitCode": 0,
+      "note": "Syntax verification passed"
+    },
+    {
+      "id": "syntax-check-catalog-services",
+      "name": "node --check",
+      "kind": "LINT",
+      "required": true,
+      "status": "PASS",
+      "scope": "backend/src/services/catalog.service.js",
+      "exitCode": 0,
+      "note": "Syntax verification passed"
+    },
+    {
+      "id": "syntax-check-public-services",
+      "name": "node --check",
+      "kind": "LINT",
+      "required": true,
+      "status": "PASS",
+      "scope": "backend/src/services/public.service.js",
+      "exitCode": 0,
+      "note": "Syntax verification passed"
+    },
+    {
+      "id": "syntax-check-cms-models",
+      "name": "node --check",
+      "kind": "LINT",
+      "required": true,
+      "status": "PASS",
+      "scope": "backend/src/models/CMS/*.js",
+      "exitCode": 0,
+      "note": "Syntax verification passed across all 6 CMS models"
+    },
+    {
+      "id": "automated-tests-catalog",
+      "name": "catalog-unit-tests",
+      "kind": "TEST",
+      "required": true,
+      "status": "NOT_AVAILABLE",
+      "scope": "backend/src/routes/catalog.js",
+      "exitCode": null,
+      "note": "No test runner configured in backend"
+    }
+  ],
+  "crossModuleFindings": []
+}

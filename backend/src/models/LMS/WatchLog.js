@@ -23,13 +23,11 @@ const schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
     video: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Video",
       required: true,
-      index: true,
     },
     totalWatchedSeconds: { type: Number, default: 0 },
     lastWatchedAt: Date,

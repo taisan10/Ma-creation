@@ -1,0 +1,626 @@
+{
+  "schemaVersion": "1.0",
+  "run": {
+    "id": "audit-auth-20261114",
+    "kind": "module",
+    "title": "Backend Auth Module Audit",
+    "startedAt": "2026-11-14T10:53:40Z",
+    "completedAt": "2026-11-14T11:05:00Z",
+    "repo": {
+      "id": "ma-creation",
+      "root": ".",
+      "branch": "main",
+      "commit": "36f55fdcf2a44d01c6279a4a21b417b84d1166ba",
+      "dirty": true
+    },
+    "scope": {
+      "modules": ["auth"],
+      "filesInspected": [
+        "backend/src/routes/auth.js",
+        "backend/src/controllers/authController.js",
+        "backend/src/services/auth.service.js",
+        "backend/src/validators/auth.validator.js",
+        "backend/src/middleware/auth.js",
+        "backend/src/middleware/loginRateLimiter.js",
+        "backend/src/middleware/refreshCsrf.guard.js",
+        "backend/src/models/AUTH/AccessTokenSession.js",
+        "backend/src/models/AUTH/RefreshToken.js",
+        "backend/src/models/AUTH/SecurityIncident.js",
+        "backend/src/models/AUTH/User.js",
+        "backend/src/utils/token.util.js",
+        "backend/src/utils/password.util.js"
+      ],
+      "sharedDependencies": [
+        "backend/src/app.js",
+        "backend/src/config/env.js",
+        "backend/src/middleware/validate.js",
+        "backend/src/middleware/error.js",
+        "backend/src/models/LMS/PlaybackSession.js"
+      ]
+    }
+  },
+  "checks": [
+    {
+      "id": "node-syntax-auth",
+      "name": "node-syntax-check",
+      "kind": "TYPECHECK",
+      "required": true,
+      "status": "PASS",
+      "scope": "backend/src/auth*",
+      "version": "v22.x",
+      "command": "node --check <files>",
+      "exitCode": 0,
+      "startedAt": "2026-11-14T10:55:00Z",
+      "completedAt": "2026-11-14T10:55:03Z",
+      "note": "All 13 Auth module source and model files passed syntax verification."
+    },
+    {
+      "id": "auth-unit-integration-tests",
+      "name": "auth-test-runner",
+      "kind": "TEST",
+      "required": true,
+      "status": "NOT_AVAILABLE",
+      "scope": "backend/src/routes/auth.js",
+      "exitCode": null,
+      "note": "Zero unit or integration test suites exist in the backend repository."
+    }
+  ],
+  "skillExecutions": [
+    {
+      "name": "audit-module",
+      "installedPath": ".agents/skills/audit-module/SKILL.md",
+      "invocationMode": "SKILL_FILE_LOADED",
+      "status": "EXECUTED",
+      "scope": "backend auth module",
+      "findingsProduced": [
+        "AUTH-SEC-01", "AUTH-SEC-02", "AUTH-SEC-03", "AUTH-SEC-04",
+        "AUTH-SEC-05", "AUTH-SEC-06", "AUTH-SEC-07", "AUTH-SEC-08",
+        "AUTH-SEC-09", "AUTH-SEC-10", "AUTH-TST-01"
+      ]
+    },
+    {
+      "name": "edge-perimeter-guard",
+      "installedPath": "C:\\Users\\Asus\\.gemini\\config\\skills\\edge-perimeter-guard\\SKILL.md",
+      "invocationMode": "SKILL_FILE_LOADED",
+      "status": "EXECUTED",
+      "scope": "CORS origin validation, CSRF headers, rate limiting, cookies",
+      "findingsProduced": ["AUTH-SEC-01", "AUTH-SEC-06", "AUTH-SEC-08"]
+    },
+    {
+      "name": "ponytail-sec-audit",
+      "installedPath": "C:\\Users\\Asus\\.gemini\\config\\skills\\ponytail-sec-audit\\SKILL.md",
+      "invocationMode": "SKILL_FILE_LOADED",
+      "status": "EXECUTED",
+      "scope": "JWT verification, Argon2id parameters, RTR token rotation, session lifecycle",
+      "findingsProduced": ["AUTH-SEC-02", "AUTH-SEC-03", "AUTH-SEC-04", "AUTH-SEC-05", "AUTH-SEC-07", "AUTH-SEC-09", "AUTH-SEC-10"]
+    }
+  ],
+  "modules": [
+    {
+      "name": "auth",
+      "status": "READY",
+      "scope": {
+        "files": [
+          "backend/src/routes/auth.js",
+          "backend/src/controllers/authController.js",
+          "backend/src/services/auth.service.js",
+          "backend/src/validators/auth.validator.js",
+          "backend/src/middleware/auth.js",
+          "backend/src/middleware/loginRateLimiter.js",
+          "backend/src/middleware/refreshCsrf.guard.js",
+          "backend/src/models/AUTH/AccessTokenSession.js",
+          "backend/src/models/AUTH/RefreshToken.js",
+          "backend/src/models/AUTH/SecurityIncident.js",
+          "backend/src/models/AUTH/User.js",
+          "backend/src/utils/token.util.js",
+          "backend/src/utils/password.util.js"
+        ],
+        "sharedDependencies": [
+          "backend/src/app.js",
+          "backend/src/config/env.js",
+          "backend/src/middleware/validate.js",
+          "backend/src/middleware/error.js",
+          "backend/src/models/LMS/PlaybackSession.js"
+        ],
+        "excluded": [
+          "backend/node_modules"
+        ]
+      },
+      "checks": [
+        {
+          "id": "node-syntax-auth",
+          "name": "node-syntax-check",
+          "kind": "TYPECHECK",
+          "required": true,
+          "status": "PASS",
+          "scope": "backend/src/auth*",
+          "version": "v22.x",
+          "command": "node --check <files>",
+          "exitCode": 0,
+          "startedAt": "2026-11-14T10:55:00Z",
+          "completedAt": "2026-11-14T10:55:03Z",
+          "note": "All 13 Auth module source and model files passed syntax verification."
+        },
+        {
+          "id": "auth-unit-integration-tests",
+          "name": "auth-test-runner",
+          "kind": "TEST",
+          "required": true,
+          "status": "NOT_AVAILABLE",
+          "scope": "backend/src/routes/auth.js",
+          "exitCode": null,
+          "note": "Zero unit or integration test suites exist in the backend repository."
+        }
+      ],
+      "skillExecutions": [
+        {
+          "name": "audit-module",
+          "installedPath": ".agents/skills/audit-module/SKILL.md",
+          "invocationMode": "SKILL_FILE_LOADED",
+          "status": "EXECUTED",
+          "scope": "backend auth module",
+          "findingsProduced": [
+            "AUTH-SEC-01", "AUTH-SEC-02", "AUTH-SEC-03", "AUTH-SEC-04",
+            "AUTH-SEC-05", "AUTH-SEC-06", "AUTH-SEC-07", "AUTH-SEC-08",
+            "AUTH-SEC-09", "AUTH-SEC-10", "AUTH-TST-01"
+          ]
+        },
+        {
+          "name": "edge-perimeter-guard",
+          "installedPath": "C:\\Users\\Asus\\.gemini\\config\\skills\\edge-perimeter-guard\\SKILL.md",
+          "invocationMode": "SKILL_FILE_LOADED",
+          "status": "EXECUTED",
+          "scope": "CORS origin validation, CSRF headers, rate limiting, cookies",
+          "findingsProduced": ["AUTH-SEC-01", "AUTH-SEC-06", "AUTH-SEC-08"]
+        },
+        {
+          "name": "ponytail-sec-audit",
+          "installedPath": "C:\\Users\\Asus\\.gemini\\config\\skills\\ponytail-sec-audit\\SKILL.md",
+          "invocationMode": "SKILL_FILE_LOADED",
+          "status": "EXECUTED",
+          "scope": "JWT verification, Argon2id parameters, RTR token rotation, session lifecycle",
+          "findingsProduced": ["AUTH-SEC-02", "AUTH-SEC-03", "AUTH-SEC-04", "AUTH-SEC-05", "AUTH-SEC-07", "AUTH-SEC-09", "AUTH-SEC-10"]
+        }
+      ],
+      "testMatrix": [
+        {
+          "id": "TM-AUTH-01",
+          "endpoint": "POST /api/auth/register",
+          "scenario": "Successful customer registration with valid credentials and single device session enforcement",
+          "classification": "MISSING",
+          "impact": "Core onboarding flow lacks automated verification."
+        },
+        {
+          "id": "TM-AUTH-02",
+          "endpoint": "POST /api/auth/register",
+          "scenario": "Duplicate email registration rejection with 409 CONFLICT",
+          "classification": "MISSING",
+          "impact": "Regression in unique constraint handling could cause unhandled 500 crashes."
+        },
+        {
+          "id": "TM-AUTH-03",
+          "endpoint": "POST /api/auth/register",
+          "scenario": "Concurrent duplicate registration race condition (TOCTOU)",
+          "classification": "MISSING",
+          "impact": "Concurrent requests could trigger unhandled Mongo duplicate key errors."
+        },
+        {
+          "id": "TM-AUTH-04",
+          "endpoint": "POST /api/auth/login",
+          "scenario": "Valid credentials login returning access token and setting HttpOnly refresh cookie",
+          "classification": "MISSING",
+          "impact": "Primary authentication path unverified."
+        },
+        {
+          "id": "TM-AUTH-05",
+          "endpoint": "POST /api/auth/login",
+          "scenario": "Invalid password returns uniform 401 and computes Argon2 anti-timing dummy hash",
+          "classification": "MISSING",
+          "impact": "Timing differences could facilitate credential enumeration."
+        },
+        {
+          "id": "TM-AUTH-06",
+          "endpoint": "POST /api/auth/login",
+          "scenario": "Account lockout triggered after 5 consecutive failed attempts (423 ACCOUNT_LOCKED)",
+          "classification": "MISSING",
+          "impact": "Account lockout state transition unverified."
+        },
+        {
+          "id": "TM-AUTH-07",
+          "endpoint": "POST /api/auth/login",
+          "scenario": "Inactive user login rejection (403 ACCOUNT_INACTIVE)",
+          "classification": "MISSING",
+          "impact": "Deactivated accounts could access system if status check fails."
+        },
+        {
+          "id": "TM-AUTH-08",
+          "endpoint": "POST /api/auth/refresh",
+          "scenario": "Valid refresh token rotation via HttpOnly cookie with x-refresh-token header",
+          "classification": "MISSING",
+          "impact": "Token refresh and rotation flow unverified."
+        },
+        {
+          "id": "TM-AUTH-09",
+          "endpoint": "POST /api/auth/refresh",
+          "scenario": "Automatic breach containment when a previously revoked refresh token is reused",
+          "classification": "MISSING",
+          "impact": "Token theft detection invariants could fail silently."
+        },
+        {
+          "id": "TM-AUTH-10",
+          "endpoint": "POST /api/auth/refresh",
+          "scenario": "Concurrent refresh requests race condition handling without false positive session kill",
+          "classification": "MISSING",
+          "impact": "Frontend parallel requests could kill valid sessions."
+        },
+        {
+          "id": "TM-AUTH-11",
+          "endpoint": "POST /api/auth/logout",
+          "scenario": "Session logout instantly deletes AccessTokenSession and revokes RefreshToken",
+          "classification": "MISSING",
+          "impact": "Revocation invariants unverified."
+        },
+        {
+          "id": "TM-AUTH-12",
+          "endpoint": "POST /api/auth/logout",
+          "scenario": "Logout attempt with expired access token successfully revokes refresh token and clears cookie",
+          "classification": "MISSING",
+          "impact": "Users left in un-loggable state on session expiry."
+        },
+        {
+          "id": "TM-AUTH-13",
+          "endpoint": "POST /api/auth/logout-all",
+          "scenario": "Logout-all revokes all refresh tokens and deletes all access and playback sessions",
+          "classification": "MISSING",
+          "impact": "Cross-device session termination could leave orphaned active tokens."
+        },
+        {
+          "id": "TM-AUTH-14",
+          "endpoint": "POST /api/auth/change-password",
+          "scenario": "Password update with Argon2id re-hashing and full session revocation across devices",
+          "classification": "MISSING",
+          "impact": "Compromised accounts could retain stolen sessions after password change."
+        },
+        {
+          "id": "TM-AUTH-15",
+          "endpoint": "GET /api/auth/me",
+          "scenario": "Authenticated profile fetch strictly excludes passwordHash from returned JSON",
+          "classification": "MISSING",
+          "impact": "Password hash exposure risk."
+        },
+        {
+          "id": "TM-AUTH-16",
+          "endpoint": "Middleware authenticate",
+          "scenario": "Bearer JWT authentication verifies signature, JTI revocation, active status and lockout",
+          "classification": "MISSING",
+          "impact": "Core perimeter guard for protected routes unverified."
+        },
+        {
+          "id": "TM-AUTH-17",
+          "endpoint": "Middleware authenticate",
+          "scenario": "Playback session UUID token permitted only on /api/videos routes with video ID binding",
+          "classification": "MISSING",
+          "impact": "Video token privilege escalation to non-video endpoints."
+        },
+        {
+          "id": "TM-AUTH-18",
+          "endpoint": "Middleware refreshCsrfGuard",
+          "scenario": "Rejection of WEB refresh requests lacking x-refresh-token: 1 header with 403 FORBIDDEN",
+          "classification": "MISSING",
+          "impact": "Cross-origin CSRF protection bypass."
+        }
+      ],
+      "coverage": {
+        "line": 0.0,
+        "branch": 0.0,
+        "function": 0.0,
+        "statement": 0.0,
+        "source": "None (No test harness present in backend/package.json)"
+      },
+      "findings": [
+        {
+          "id": "AUTH-SEC-01",
+          "fingerprint": "auth:cors-csrf-refresh-token-theft:app.js",
+          "primaryCategory": "SECURITY_VULNERABILITY",
+          "severity": "CRITICAL",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Overly Permissive CORS Whitelist with Credentials Reflection Enables Cross-Origin Refresh Token Theft",
+          "location": {
+            "file": "backend/src/app.js",
+            "lineStart": 56,
+            "lineEnd": 64,
+            "symbol": "app.use(cors)"
+          },
+          "evidence": "app.use(cors({\n  origin: (origin, callback) => {\n    if (!origin || origin.startsWith(env.clientUrl) || origin.includes('localhost') || origin.includes('pinggy') || origin.includes('trycloudflare')) {\n      return callback(null, true);\n    }\n    return callback(new Error('Not allowed by CORS'));\n  },\n  credentials: true\n}));",
+          "scenario": "An attacker creates a malicious page hosted on Cloudflare Quick Tunnels (*.trycloudflare.com), Pinggy, or a domain starting with env.clientUrl (e.g. https://clientUrl.attacker.com). When an authenticated user visits the attacker's page, a client-side fetch is executed to /api/auth/refresh with header 'x-refresh-token: 1'. Because origin.includes('trycloudflare') evaluates to true, CORS reflects the attacker origin with Access-Control-Allow-Credentials: true. The refreshCsrfGuard header check passes because custom headers are permitted on whitelisted CORS origins. The backend returns newly rotated accessToken and user details in the JSON response body, which the attacker script reads directly.",
+          "impact": "Complete account takeover of any logged-in web user who visits an attacker-controlled site or tunnel.",
+          "reproduction": "Deploy local server; execute fetch('http://localhost:5000/api/auth/refresh', { method: 'POST', credentials: 'include', headers: { 'Origin': 'https://evil.trycloudflare.com', 'x-refresh-token': '1' } }); verify response header Access-Control-Allow-Origin equals attacker origin and credentials allowed.",
+          "remediation": "Replace substring and prefix matching (.includes, .startsWith) with a strict, exact-match array of allowed origin strings. Never allow wildcard or public tunnel domains in production CORS configuration.",
+          "regressionTest": "CORS preflight and actual POST requests with Origin 'https://evil.trycloudflare.com' or 'http://localhost.attacker.com' must be rejected with 403 or omitted Access-Control-Allow-Origin header.",
+          "discoveredByTest": false,
+          "sourceAgents": ["module-auth-lead"],
+          "sourceSkills": ["audit-module", "edge-perimeter-guard"],
+          "relatedFindingIds": ["AUTH-SEC-06"]
+        },
+        {
+          "id": "AUTH-SEC-02",
+          "fingerprint": "auth:user-passwordhash-select-omission:user.js",
+          "primaryCategory": "SECURITY_VULNERABILITY",
+          "severity": "HIGH",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Missing select: false on passwordHash Field in User Mongoose Schema",
+          "location": {
+            "file": "backend/src/models/AUTH/User.js",
+            "lineStart": 8,
+            "lineEnd": 8,
+            "symbol": "userSchema.passwordHash"
+          },
+          "evidence": "passwordHash: { type: String, required: true },",
+          "scenario": "In Mongoose, any schema path without select: false is loaded by default in every query (User.find, User.findById, User.findOne, User.findByIdAndUpdate). Although auth.service.js uses .select('+passwordHash') (demonstrating the developer intended for it to be deselected by default), omitting select: false causes passwordHash to be loaded in other services (such as payment.service.js, video.service.js, or admin endpoints) unless manually excluded with .select('-passwordHash'). Any endpoint returning a User object without manual field projection leaks the Argon2id password hash.",
+          "impact": "Exposure of Argon2id password hashes to unauthorized API consumers, logs, and external adapters, increasing risk of offline dictionary attacks.",
+          "reproduction": "Execute User.findById(id) in Node console without .select(); inspect the returned document to observe passwordHash present.",
+          "remediation": "Set select: false on passwordHash in backend/src/models/AUTH/User.js and configure a toJSON schema transform to delete passwordHash upon serialization.",
+          "regressionTest": "Query User.findOne() without field projections and assert that returned object does not contain property 'passwordHash'.",
+          "discoveredByTest": false,
+          "sourceAgents": ["module-auth-lead"],
+          "sourceSkills": ["audit-module", "ponytail-sec-audit"],
+          "relatedFindingIds": []
+        },
+        {
+          "id": "AUTH-SEC-03",
+          "fingerprint": "auth:account-lockout-permanent-dos:auth.service.js",
+          "primaryCategory": "SECURITY_VULNERABILITY",
+          "severity": "HIGH",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Unauthenticated Account Lockout Denial of Service (DoS) on Targeted Users and Admins",
+          "location": {
+            "file": "backend/src/services/auth.service.js",
+            "lineStart": 46,
+            "lineEnd": 59,
+            "symbol": "AuthService.validateCredentials"
+          },
+          "evidence": "if (!isValid) {\n  user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1\n  if (user.failedLoginAttempts >= 5) {\n    user.lockedUntil = new Date(Date.now() + getLockoutDuration(user.failedLoginAttempts))\n  }\n  await user.save()\n  throw new Error('Invalid email or password')\n}",
+          "scenario": "An unauthenticated attacker sends 5 invalid passwords for a known target email (e.g. admin@macreation.in or student emails). The target user's account is locked for 15 minutes. Continued requests increase lockout duration to 1 hour (10 failures) and 4 hours (15 failures). Because there is no CAPTCHA, no administrative unlock endpoint, and no self-service email unlock mechanism, an attacker running a simple 15-minute cron job can keep administrators and students permanently locked out of the application.",
+          "impact": "Permanent denial of service for administrative accounts and target student accounts with zero privileges required.",
+          "reproduction": "Send 5 POST requests to /api/auth/login with valid email and incorrect password; observe 6th request rejected with 423 ACCOUNT_LOCKED.",
+          "remediation": "Couple lockout with IP-based and email-based rate limits in Redis; present CAPTCHA / Cloudflare Turnstile after 3 failed attempts; implement an email unlock link; exempt admin accounts from automatic lockouts without secondary MFA or administrative reset capabilities.",
+          "regressionTest": "Verify account lockout cannot be triggered across different IP addresses without triggering CAPTCHA / rate limiting, and verify an unlock endpoint exists.",
+          "discoveredByTest": false,
+          "sourceAgents": ["module-auth-lead"],
+          "sourceSkills": ["audit-module", "ponytail-sec-audit"],
+          "relatedFindingIds": ["AUTH-SEC-05"]
+        },
+        {
+          "id": "AUTH-SEC-04",
+          "fingerprint": "auth:rtr-concurrency-race-condition:auth.service.js",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "severity": "HIGH",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Concurrency Race Condition in Refresh Token Rotation (RTR) Triggers False-Positive Breach Lockout",
+          "location": {
+            "file": "backend/src/services/auth.service.js",
+            "lineStart": 146,
+            "lineEnd": 183,
+            "symbol": "AuthService.refreshTokens"
+          },
+          "evidence": "const existingToken = await RefreshToken.findOne({ tokenHash })\nif (existingToken.isRevoked) {\n  await RefreshToken.updateMany({ userId: existingToken.userId, sessionId: existingToken.sessionId }, { $set: { isRevoked: true, revokedReason: 'POSSIBLE_TOKEN_THEFT_DETECTED' } })\n  await AccessTokenSession.deleteMany({ userId: existingToken.userId, sessionId: existingToken.sessionId })\n  throw new Error('Token reuse detected. All sessions terminated for security.')\n}\nexistingToken.isRevoked = true;\nawait existingToken.save();",
+          "scenario": "When a web page with multiple concurrent data fetches experiences token expiration, multiple simultaneous API calls receive 401 and immediately dispatch concurrent POST /api/auth/refresh requests with the same refresh token. Because findOne and save are non-atomic, the second incoming request observes isRevoked: true and mistakenly classifies the legitimate race as a token replay attack ('POSSIBLE_TOKEN_THEFT_DETECTED'), instantly revoking all active sessions and logging the user out.",
+          "impact": "Frequent unexpected logouts and session termination for legitimate users during normal multi-tab or concurrent request browsing.",
+          "reproduction": "Issue two simultaneous asynchronous HTTP POST requests to /api/auth/refresh with identical refresh token cookie; verify that one request fails with 'Token reuse detected' and deletes all sessions.",
+          "remediation": "Use atomic findOneAndUpdate({ tokenHash, isRevoked: false }, { $set: { isRevoked: true, revokedReason: 'TOKEN_ROTATION', revokedAt: new Date() } }). Implement a 10-30 second grace period where requests presenting the immediate predecessor token receive the newly generated token pair without triggering breach containment.",
+          "regressionTest": "Send 2 concurrent refresh requests with identical valid refresh token; verify both succeed or the second receives the new token pair without revoking the session.",
+          "discoveredByTest": false,
+          "sourceAgents": ["module-auth-lead"],
+          "sourceSkills": ["audit-module", "ponytail-sec-audit"],
+          "relatedFindingIds": []
+        },
+        {
+          "id": "AUTH-SEC-05",
+          "fingerprint": "auth:user-enumeration-status-codes:auth.service.js",
+          "primaryCategory": "SECURITY_VULNERABILITY",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "User Enumeration via Differentiated Status Codes and Error Messages",
+          "location": {
+            "file": "backend/src/services/auth.service.js",
+            "lineStart": 35,
+            "lineEnd": 49,
+            "symbol": "AuthService.validateCredentials"
+          },
+          "evidence": "if (!user) {\n  await verifyPassword(DUMMY_ARGON2_HASH, password).catch(() => {})\n  throw new Error('Invalid email or password')\n}\nif (!user.isActive) {\n  throw new AppError('Account is deactivated. Please contact support.', 403, 'ACCOUNT_INACTIVE')\n}\nif (user.lockedUntil && user.lockedUntil > new Date()) {\n  throw new AppError(`Account is temporarily locked due to failed attempts...`, 423, 'ACCOUNT_LOCKED')\n}",
+          "scenario": "While the implementation introduces DUMMY_ARGON2_HASH to eliminate timing discrepancies for non-existent users, it returns distinct HTTP status codes (403 ACCOUNT_INACTIVE, 423 ACCOUNT_LOCKED) and distinct error messages for existing accounts. In addition, registerUser returns 409 CONFLICT if an email exists. An attacker can determine whether an arbitrary email address is registered by either attempting registration or triggering 5 failed login attempts to observe a 423 status code.",
+          "impact": "Account discovery and email address harvesting for targeted phishing and credential stuffing attacks.",
+          "reproduction": "Send login requests with non-existent email -> returns 401 INVALID_CREDENTIALS. Send 5 invalid login requests for existing email -> returns 423 ACCOUNT_LOCKED, confirming existence.",
+          "remediation": "Return generic error responses for login failures (e.g. 401 Invalid credentials or account unavailable) without leaking active/locked status in public unauthenticated endpoints.",
+          "regressionTest": "Assert that responses for non-existent emails, locked accounts, and incorrect passwords return identical HTTP 401 status and error structure.",
+          "discoveredByTest": false,
+          "sourceAgents": ["module-auth-lead"],
+          "sourceSkills": ["audit-module", "ponytail-sec-audit"],
+          "relatedFindingIds": ["AUTH-SEC-03"]
+        },
+        {
+          "id": "AUTH-SEC-06",
+          "fingerprint": "auth:csrf-bypass-mobile-platform-cookie-fallback:authController.js",
+          "primaryCategory": "SECURITY_VULNERABILITY",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "CSRF Guard Bypass on Mobile Platform Fallback to HttpOnly Cookie",
+          "location": {
+            "file": "backend/src/controllers/authController.js",
+            "lineStart": 60,
+            "lineEnd": 62,
+            "symbol": "authController.refresh"
+          },
+          "evidence": "const rawRefreshToken = platform === 'WEB' ? req.cookies?.refreshToken : req.body?.refreshToken || req.cookies?.refreshToken",
+          "scenario": "refreshCsrfGuard explicitly skips validation when x-client-platform is set to MOBILE_IOS or MOBILE_ANDROID under the assumption that mobile clients pass refresh tokens in req.body. However, authController.js line 61 falls back to req.cookies?.refreshToken if req.body.refreshToken is not provided. In contexts where custom headers can be set (such as via permissive CORS or browser webviews), passing x-client-platform: MOBILE_ANDROID completely bypasses the CSRF guard while still using the victim's cookie.",
+          "impact": "Bypasses the CSRF defense mechanism intended for cookie-authenticated clients.",
+          "reproduction": "Send POST request to /api/auth/refresh with header 'x-client-platform: MOBILE_ANDROID' without 'x-refresh-token: 1'; verify request is accepted and executes token refresh.",
+          "remediation": "When platform is not WEB, strictly require req.body.refreshToken and never fall back to req.cookies. Conversely, for WEB, strictly require cookies and enforce SameSite=Strict cookies with an anti-CSRF token.",
+          "regressionTest": "Verify that POST /api/auth/refresh with x-client-platform: MOBILE_ANDROID and empty body returns 400/401 and ignores cookies.",
+          "discoveredByTest": false,
+          "sourceAgents": ["module-auth-lead"],
+          "sourceSkills": ["audit-module", "edge-perimeter-guard"],
+          "relatedFindingIds": ["AUTH-SEC-01"]
+        },
+        {
+          "id": "AUTH-SEC-07",
+          "fingerprint": "auth:expired-token-logout-failure:routes.auth.js",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Inability to Logout with Expired Access Token Leaves Refresh Token Active",
+          "location": {
+            "file": "backend/src/routes/auth.js",
+            "lineStart": 15,
+            "lineEnd": 15,
+            "symbol": "router.post('/logout')"
+          },
+          "evidence": "router.post('/logout', authenticate, refreshCsrfGuard, asyncHandler(c.logout))",
+          "scenario": "The /logout endpoint enforces the authenticate middleware, which rejects expired access tokens with 401 'Session expired. Please login again'. If a user's 15-minute access token has expired and they click 'Log Out', the request is rejected before reaching authController.logout. As a result, the RefreshToken record in MongoDB remains active (isRevoked: false) and the HttpOnly cookie is not cleared from the browser.",
+          "impact": "Stale sessions and valid refresh tokens remain in the database and user browser after attempted logout.",
+          "reproduction": "Wait 15 minutes for access token expiration (or forge an expired JWT); issue POST /api/auth/logout with expired token; verify 401 error is returned and refreshToken cookie remains set in browser.",
+          "remediation": "Allow /logout to proceed even if the access token is expired, or create an unauthenticated logout fallback that extracts and revokes the refresh token cookie and clears the cookie headers.",
+          "regressionTest": "Send POST /api/auth/logout with an expired access token and valid refresh cookie; verify response is 200 OK and cookie is cleared.",
+          "discoveredByTest": false,
+          "sourceAgents": ["module-auth-lead"],
+          "sourceSkills": ["audit-module", "ponytail-sec-audit"],
+          "relatedFindingIds": []
+        },
+        {
+          "id": "AUTH-SEC-08",
+          "fingerprint": "auth:in-memory-rate-limiter-cluster-leak:loginRateLimiter.js",
+          "primaryCategory": "SECURITY_VULNERABILITY",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "In-Memory Login Rate Limiter Lacks Distributed Redis Store and Skips Non-Production",
+          "location": {
+            "file": "backend/src/middleware/loginRateLimiter.js",
+            "lineStart": 8,
+            "lineEnd": 15,
+            "symbol": "loginRateLimiter"
+          },
+          "evidence": "export const loginRateLimiter = rateLimit({\n  windowMs: 15 * 60 * 1000,\n  max: process.env.LOAD_TEST_MODE === 'true' ? 100000 : 10,\n  skip: () => process.env.NODE_ENV !== 'production' || process.env.LOAD_TEST_MODE === 'true',\n  ...\n})",
+          "scenario": "express-rate-limit uses default in-memory storage without Redis backing. In clustered or multi-container deployments, each process maintains an independent attempt table, multiplying allowed brute-force attempts. Rate limit state is completely wiped on server restarts. In addition, the skip predicate disables rate limiting entirely when NODE_ENV is not explicitly set to 'production', leaving local, staging, and load-test environments exposed to Argon2 CPU exhaustion.",
+          "impact": "Bypass of login rate limits in clustered environments and total absence of DoS protection in staging/dev deployments.",
+          "reproduction": "Start multi-core cluster; dispatch 10 login requests across processes; observe each worker tracking counters independently.",
+          "remediation": "Connect express-rate-limit to Redis using rate-limit-redis. Scope the skip option strictly to automated test runners rather than entire non-production environments.",
+          "regressionTest": "Verify that rate limit counters are shared across multiple instances via Redis keys.",
+          "discoveredByTest": false,
+          "sourceAgents": ["module-auth-lead"],
+          "sourceSkills": ["audit-module", "edge-perimeter-guard"],
+          "relatedFindingIds": []
+        },
+        {
+          "id": "AUTH-SEC-09",
+          "fingerprint": "auth:jwt-secret-inconsistent-fallback:auth.service.js",
+          "primaryCategory": "SECURITY_VULNERABILITY",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Inconsistent JWT Secret Configuration and Hardcoded Fallback String",
+          "location": {
+            "file": "backend/src/services/auth.service.js",
+            "lineStart": 75,
+            "lineEnd": 75,
+            "symbol": "AuthService.issueTokens"
+          },
+          "evidence": "const jwtSecret = process.env.JWT_SECRET || 'your-default-jwt-secret-key-change-it'",
+          "scenario": "AuthService uses a hardcoded fallback string ('your-default-jwt-secret-key-change-it') while the authenticate middleware imports env.jwtSecret from config/env.js (which has no fallback). In development environments where JWT_SECRET is omitted, AuthService signs tokens successfully with the default string, but authenticate throws a 500/401 error because secret is undefined. If the fallback string is ever deployed, tokens can be forged trivially.",
+          "impact": "Insecure default secret risk and configuration divergence between token issuance and token verification.",
+          "reproduction": "Unset JWT_SECRET in environment; run AuthService.issueTokens() and then pass the resulting token to authenticate middleware; observe verification failure.",
+          "remediation": "Use env.jwtSecret from config/env.js uniformly in AuthService. Enforce non-empty high-entropy JWT_SECRET during server startup in all environments.",
+          "regressionTest": "Verify AuthService.issueTokens uses env.jwtSecret and throws during application startup if secret is missing or insecure.",
+          "discoveredByTest": false,
+          "sourceAgents": ["module-auth-lead"],
+          "sourceSkills": ["audit-module", "ponytail-sec-audit"],
+          "relatedFindingIds": []
+        },
+        {
+          "id": "AUTH-SEC-10",
+          "fingerprint": "auth:single-logout-leaves-playback-session-active:auth.service.js",
+          "primaryCategory": "SECURITY_VULNERABILITY",
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Single Session Logout Does Not Invalidate Associated Playback Sessions",
+          "location": {
+            "file": "backend/src/services/auth.service.js",
+            "lineStart": 201,
+            "lineEnd": 213,
+            "symbol": "AuthService.logout"
+          },
+          "evidence": "static async logout(userId, rawRefreshToken, jti) {\n  if (rawRefreshToken) {\n    const tokenHash = hashToken(rawRefreshToken)\n    await RefreshToken.updateOne({ tokenHash, userId }, { $set: { isRevoked: true, revokedReason: 'USER_LOGOUT', revokedAt: new Date() } })\n  }\n  if (jti) {\n    await AccessTokenSession.deleteOne({ jti, userId })\n  }\n}",
+          "scenario": "While logoutAll and terminatePreviousSessions explicitly execute PlaybackSession.deleteMany({ user: userId }), the standard logout method only deletes the AccessTokenSession and marks the RefreshToken revoked. Any PlaybackSession UUID token issued to that browser for video streaming remains valid and can continue to access HLS video segments until the PlaybackSession expires.",
+          "impact": "Unrevoked video playback sessions persist after user logout.",
+          "reproduction": "Generate a PlaybackSession token; invoke /api/auth/logout; verify the playback session token remains functional on /api/videos streaming routes.",
+          "remediation": "Add PlaybackSession invalidation for the current session or user inside AuthService.logout().",
+          "regressionTest": "Call logout() and assert that PlaybackSession records for that session are invalidated.",
+          "discoveredByTest": false,
+          "sourceAgents": ["module-auth-lead"],
+          "sourceSkills": ["audit-module", "ponytail-sec-audit"],
+          "relatedFindingIds": []
+        },
+        {
+          "id": "AUTH-TST-01",
+          "fingerprint": "auth:zero-test-coverage-matrix:backend",
+          "primaryCategory": "MISSING_TEST",
+          "severity": "HIGH",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Zero Automated Unit and Integration Test Coverage for Authentication Module",
+          "location": {
+            "file": "backend/src/routes/auth.js",
+            "lineStart": 1,
+            "lineEnd": 20,
+            "symbol": "authRouter"
+          },
+          "evidence": "backend/package.json contains no test script (only k6 load tests); 0 unit or integration test files exist for auth in the repository.",
+          "scenario": "The application handles critical cryptographic operations (Argon2id hashing, token issuance, refresh token rotation, account lockout, CSRF protection, session revocation) with 0% automated unit or integration test coverage. Any refactoring or dependency update risks introducing silent regressions without detection.",
+          "impact": "High risk of security and logic regressions across all authentication and authorization flows.",
+          "reproduction": "Inspect backend/package.json scripts.test; run test suite to verify absence.",
+          "remediation": "Add a testing harness (Vitest or Jest) with comprehensive integration test suites for all 7 auth endpoints and middleware.",
+          "regressionTest": "Execute npm test and verify minimum 90% branch and statement coverage across auth routes, controllers, and services.",
+          "discoveredByTest": false,
+          "sourceAgents": ["module-auth-lead"],
+          "sourceSkills": ["audit-module"],
+          "relatedFindingIds": []
+        }
+      ]
+    }
+  ],
+  "crossModuleFindings": [],
+  "notes": [
+    "Auth module audited with deep security, code quality, and test matrix analysis.",
+    "Found 1 CRITICAL, 4 HIGH, 5 MEDIUM, 1 LOW findings across CORS/CSRF token theft, password hash schema omission, account lockout DoS, RTR concurrency race, user enumeration, and 0% test coverage."
+  ]
+}

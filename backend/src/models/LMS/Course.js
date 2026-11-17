@@ -18,7 +18,6 @@ const schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Plan",
       required: true,
-      index: true,
     },
     title: { type: String, required: true, trim: true, maxLength: 160 },
     description: { type: String, maxLength: 2000 },

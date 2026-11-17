@@ -1,0 +1,63 @@
+{
+  "$schema": "./.agents/skills/audit-module/references/qa-config.schema.json",
+  "version": 1,
+  "project": {
+    "name": "MA-Creation",
+    "packageManager": "npm",
+    "backendRoot": "backend"
+  },
+  "orchestration": {
+    "nativeSwarmPreferred": true,
+    "allowSupportedSubagentFallback": true,
+    "remoteReasoningConcurrency": "host-managed",
+    "localHeavyProcessSlots": 1,
+    "browserSlots": 1,
+    "dockerBuildSlots": 1
+  },
+  "profiles": {
+    "default": "standard",
+    "standard": {
+      "runExistingUnitTests": true,
+      "runExistingIsolatedIntegrationTests": true,
+      "runTargetedCoverage": true,
+      "runGeneratedEphemeralTests": false,
+      "runPlaywright": "when_module_has_existing_safe_target",
+      "mutationTesting": false,
+      "propertyBasedTesting": "when_existing_harness_supports_it"
+    },
+    "deep": {
+      "runExistingUnitTests": true,
+      "runExistingIsolatedIntegrationTests": true,
+      "runTargetedCoverage": true,
+      "runGeneratedEphemeralTests": "isolated_worktree_only",
+      "runPlaywright": "when_isolated_target_exists",
+      "mutationTesting": "critical_logic_only",
+      "propertyBasedTesting": "when_existing_harness_supports_it"
+    },
+    "security": {
+      "runSecuritySkills": true,
+      "runSast": true,
+      "runExistingTests": "relevant_security_tests",
+      "activeDast": false
+    }
+  },
+  "safety": {
+    "readOnlyApplicationSource": true,
+    "readOnlyExistingTests": true,
+    "productionAccess": false,
+    "remoteVpsScanning": false,
+    "destructiveDatabaseCommands": false,
+    "destructiveDockerCleanup": false,
+    "requireVerifiedTestIsolation": true,
+    "allowLocalComposeRehearsal": false,
+    "allowLocalDast": false
+  },
+  "reports": {
+    "directory": "reports/qa",
+    "monochrome": true,
+    "indexFile": "index.html",
+    "persistJson": true,
+    "immutableRuns": true
+  }
+}
+

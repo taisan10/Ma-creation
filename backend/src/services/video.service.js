@@ -48,6 +48,7 @@ export class VideoService {
       video: video._id,
       token,
       expiresAt,
+      maxAllowedSeconds,
       ip,
       userAgent,
     })
@@ -205,14 +206,13 @@ export class VideoService {
           { $inc: { totalWatchedSeconds: hbSeconds }, $set: {lastWatchedAt: new Date()} },
           { upsert: true, new: true }
         )
-        const video = await Video.findById(videoId)
-        const multiplier = video?.maxWatchMultiplier ?? env.videoWatchMultiplier ?? 2;
-        const maxAllowed = (video?.durationSeconds || 0) * multiplier;
+        
+        const maxAllowed = session.maxAllowedSeconds || 0;
         const remainingSeconds = Math.max(0, maxAllowed - updated.totalWatchedSeconds);
-
         if (maxAllowed > 0 && updated.totalWatchedSeconds >= maxAllowed) {
           return { watchLimitReached: true, remainingSeconds: 0, totalWatchedSeconds: updated.totalWatchedSeconds};
         }
+
         return { remainingSeconds, totalWatchedSeconds: updated.totalWatchedSeconds };
       }
       return {}

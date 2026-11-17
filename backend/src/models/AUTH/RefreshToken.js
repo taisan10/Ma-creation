@@ -6,7 +6,6 @@ const refreshTokenSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
     tokenHash: {
       type: String,
@@ -37,7 +36,6 @@ const refreshTokenSchema = new mongoose.Schema(
     isRevoked: {
       type: Boolean,
       default: false,
-      index: true,
     },
     revokedReason: {
       type: String, // e.g., 'USER_LOGOUT', 'TOKEN_ROTATION', 'REPLACED_SESSION', 'PASSWORD_CHANGE'

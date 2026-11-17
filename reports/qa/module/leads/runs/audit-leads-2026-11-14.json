@@ -1,0 +1,543 @@
+{
+  "schemaVersion": "1.0",
+  "run": {
+    "id": "audit-leads-2026-11-14",
+    "kind": "module",
+    "title": "Leads Module Baseline Audit",
+    "startedAt": "2026-11-14T10:54:22Z",
+    "completedAt": "2026-11-14T11:05:00Z",
+    "repo": {
+      "id": "MA-Creation",
+      "root": ".",
+      "branch": "main",
+      "commit": "36f55fdcf2a44d01c6279a4a21b417b84d1166ba",
+      "dirty": true
+    },
+    "scope": {
+      "modules": [
+        "leads"
+      ],
+      "filesInspected": [
+        "backend/src/routes/leads.js",
+        "backend/src/controllers/leadController.js",
+        "backend/src/services/lead.service.js",
+        "backend/src/validators/lead.validator.js",
+        "backend/src/models/CMS/Lead.js"
+      ],
+      "sharedDependencies": [
+        "backend/src/middleware/validate.js",
+        "backend/src/middleware/auth.js",
+        "backend/src/validators/admin.validator.js",
+        "backend/src/routes/admin.js",
+        "backend/src/services/admin.service.js",
+        "backend/src/app.js",
+        "frontend/src/components/DemoForm.jsx",
+        "frontend/src/pages/admin/AdminLeads.jsx"
+      ],
+      "excluded": []
+    }
+  },
+  "modules": [
+    {
+      "name": "leads",
+      "status": "FAIL",
+      "scope": {
+        "files": [
+          "backend/src/routes/leads.js",
+          "backend/src/controllers/leadController.js",
+          "backend/src/services/lead.service.js",
+          "backend/src/validators/lead.validator.js",
+          "backend/src/models/CMS/Lead.js"
+        ],
+        "sharedDependencies": [
+          "backend/src/middleware/validate.js",
+          "backend/src/middleware/auth.js",
+          "backend/src/validators/admin.validator.js",
+          "backend/src/routes/admin.js",
+          "backend/src/services/admin.service.js",
+          "backend/src/app.js",
+          "frontend/src/components/DemoForm.jsx",
+          "frontend/src/pages/admin/AdminLeads.jsx"
+        ],
+        "excluded": []
+      },
+      "testMatrix": [
+        {
+          "endpoint": "POST /api/leads",
+          "description": "Public lead submission (demo/callback)",
+          "status": "MISSING",
+          "reason": "No automated test suite in backend"
+        },
+        {
+          "endpoint": "POST /api/leads (rate limit)",
+          "description": "Rate limiting enforcement (max 10 per 15m)",
+          "status": "MISSING",
+          "reason": "No rate limiting test cases exist"
+        },
+        {
+          "endpoint": "POST /api/leads (validation)",
+          "description": "Zod schema validation on required & optional fields",
+          "status": "MISSING",
+          "reason": "No validator unit tests exist"
+        },
+        {
+          "endpoint": "GET /api/leads",
+          "description": "Admin lead retrieval authentication & role check",
+          "status": "MISSING",
+          "reason": "No authorization tests exist"
+        },
+        {
+          "endpoint": "GET /api/admin/leads",
+          "description": "Admin panel lead retrieval",
+          "status": "MISSING",
+          "reason": "No admin route tests exist"
+        },
+        {
+          "endpoint": "PATCH /api/admin/leads/:id",
+          "description": "Lead status update",
+          "status": "MISSING",
+          "reason": "No status update tests exist"
+        },
+        {
+          "endpoint": "DELETE /api/admin/leads/:id",
+          "description": "Lead record deletion",
+          "status": "MISSING",
+          "reason": "No deletion tests exist"
+        }
+      ],
+      "coverage": {
+        "line": 0,
+        "branch": 0,
+        "function": 0,
+        "statement": 0,
+        "source": "No automated test runner configured in backend/package.json"
+      },
+      "checks": [
+        {
+          "id": "syntax-check-leads",
+          "name": "node --check",
+          "kind": "LINT",
+          "required": true,
+          "status": "PASS",
+          "scope": "backend/src/routes/leads.js",
+          "exitCode": 0,
+          "note": "Syntax verification passed"
+        },
+        {
+          "id": "automated-tests-leads",
+          "name": "lead-unit-tests",
+          "kind": "TEST",
+          "required": true,
+          "status": "NOT_AVAILABLE",
+          "scope": "backend/src/routes/leads.js",
+          "exitCode": null,
+          "note": "No test runner configured"
+        }
+      ],
+      "skillExecutions": [
+        {
+          "name": "audit-module",
+          "installedPath": ".agents/skills/audit-module/SKILL.md",
+          "status": "EXECUTED",
+          "scope": "leads"
+        },
+        {
+          "name": "security-audit",
+          "installedPath": "C:\\Users\\Asus\\.gemini\\config\\skills\\security-audit\\SKILL.md",
+          "status": "EXECUTED",
+          "scope": "leads"
+        }
+      ],
+      "findings": [
+        {
+          "id": "lead-sec-01-no-captcha-or-bot-protection",
+          "fingerprint": "backend-leads-creation-abuse-no-captcha",
+          "primaryCategory": "SECURITY_DEFECT",
+          "severity": "HIGH",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Unprotected Public Lead Endpoint Lacks CAPTCHA and Bot Defenses Enabling Automation Abuse",
+          "location": {
+            "file": "backend/src/routes/leads.js",
+            "lineStart": 19,
+            "lineEnd": 19,
+            "symbol": "router.post"
+          },
+          "evidence": "router.post('/', leadRateLimit, validate(createLeadSchema), asyncHandler(c.createLead)) — endpoint is open without CAPTCHA, honeypot, or proof-of-work challenge.",
+          "scenario": "An attacker or botnet automates requests to POST /api/leads with randomized phone numbers and messages. Without CAPTCHA or bot verification, the backend inserts every request into MongoDB, polluting CRM/leads records and exhausting system resources.",
+          "impact": "Marketing queue pollution, database storage bloat, disruption of sales operations, and potential downstream SMS/email notification quota depletion.",
+          "reproduction": "Send automated POST requests with unique phone numbers to /api/leads; observe all succeed with HTTP 201 without any human verification challenge.",
+          "remediation": "Integrate Cloudflare Turnstile or Google reCAPTCHA v3 verification middleware on POST /api/leads. Add a hidden honeypot field in the payload that rejects requests if populated by automated bots.",
+          "regressionTest": "Verify POST /api/leads rejects submissions with missing or invalid CAPTCHA tokens with HTTP 400/403, and rejects requests with filled honeypot fields.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-leads-lead"
+          ],
+          "sourceSkills": [
+            "audit-module",
+            "security-audit"
+          ],
+          "relatedFindingIds": [],
+          "module": "leads"
+        },
+        {
+          "id": "lead-sec-02-memory-rate-limiter",
+          "fingerprint": "backend-leads-inmemory-rate-limiter-bypass",
+          "primaryCategory": "SECURITY_DEFECT",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "In-Memory Rate Limiting Allows Multi-Instance Bypass and Lacks Distributed Store",
+          "location": {
+            "file": "backend/src/routes/leads.js",
+            "lineStart": 11,
+            "lineEnd": 17,
+            "symbol": "leadRateLimit"
+          },
+          "evidence": "const leadRateLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: 'draft-8', legacyHeaders: false, message: { success: false, message: 'Too many requests, please try again later' } })",
+          "scenario": "In a clustered, multi-container or PM2 deployment, memory stores are isolated per Node process. Requests hitting different worker instances do not share rate limit counters. Furthermore, application restarts immediately wipe counters.",
+          "impact": "Attackers can bypass the 10 requests per 15 minutes limit by rotating across cluster workers or triggering container restarts.",
+          "reproduction": "Deploy across multiple worker processes or restart the backend process; rate limit counters reset immediately.",
+          "remediation": "Configure express-rate-limit with rate-limit-redis using the project's existing ioredis client.",
+          "regressionTest": "Assert rate limit enforcement persists across worker restarts and cluster nodes using Redis as the centralized counter.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-leads-lead"
+          ],
+          "sourceSkills": [
+            "audit-module",
+            "security-audit"
+          ],
+          "relatedFindingIds": [],
+          "module": "leads"
+        },
+        {
+          "id": "lead-sec-03-pii-and-internal-metadata-leakage",
+          "fingerprint": "backend-leads-create-pii-internal-id-leakage",
+          "primaryCategory": "SECURITY_DEFECT",
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Lead Creation Controller Leaks Internal MongoDB ObjectId and Full Record to Public Requester",
+          "location": {
+            "file": "backend/src/controllers/leadController.js",
+            "lineStart": 3,
+            "lineEnd": 6,
+            "symbol": "createLead"
+          },
+          "evidence": "export async function createLead(req, res) { const lead = await LeadService.createLead(req.body); res.status(201).json({ success: true, lead }); }",
+          "scenario": "When an unauthenticated public visitor submits a lead, the API returns the entire Mongoose document including _id, __v, status: 'new', and timestamps in the response body.",
+          "impact": "Information disclosure of internal database primary keys, model schema fields, and creation timestamps to anonymous public users.",
+          "reproduction": "Submit POST /api/leads; inspect the JSON response body to see internal MongoDB _id and model metadata echoed back.",
+          "remediation": "Return a minimal acknowledgement object: res.status(201).json({ success: true, message: 'Enquiry received successfully' }).",
+          "regressionTest": "Assert that POST /api/leads response does not contain database _id or internal schema properties.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-leads-lead"
+          ],
+          "sourceSkills": [
+            "audit-module",
+            "security-audit"
+          ],
+          "relatedFindingIds": [],
+          "module": "leads"
+        },
+        {
+          "id": "lead-perf-01-missing-database-indexes-collscan",
+          "fingerprint": "backend-leads-missing-createdat-index-collscan",
+          "primaryCategory": "PERFORMANCE_RELIABILITY",
+          "severity": "HIGH",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Missing Database Index on createdAt and status Causes In-Memory Sort and Full Collection Scans",
+          "location": {
+            "file": "backend/src/models/CMS/Lead.js",
+            "lineStart": 2,
+            "lineEnd": 2,
+            "symbol": "LeadSchema"
+          },
+          "evidence": "Schema defines { timestamps: true } but no index on createdAt or status. Lead.find().sort({ createdAt: -1 }) executes without an index.",
+          "scenario": "Admin dashboard and lead listings run Lead.find().sort({ createdAt: -1 }).limit(limit). Without an index on createdAt, MongoDB must perform a COLLSCAN and an in-memory sort. Once lead records grow, MongoDB will throw an error exceeding the 32MB in-memory sort threshold.",
+          "impact": "Query latency spikes, high database CPU utilization, and 500 crashes when collection data exceeds 32MB during in-memory sort.",
+          "reproduction": "Seed 10,000 lead records and execute query explain plan: stages reveal COLLSCAN and SORT without IXSCAN.",
+          "remediation": "Add schema.index({ createdAt: -1 }) and schema.index({ status: 1, createdAt: -1 }) in backend/src/models/CMS/Lead.js and backend/src/scripts/ensure-indexes.js.",
+          "regressionTest": "Execute explain plan on Lead.find().sort({ createdAt: -1 }) and assert IXSCAN is utilized with zero COLLSCAN.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-leads-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "relatedFindingIds": [],
+          "module": "leads"
+        },
+        {
+          "id": "lead-perf-02-unbounded-list-hardcoded-limit-no-pagination",
+          "fingerprint": "backend-leads-service-unbounded-listing-no-pagination",
+          "primaryCategory": "PERFORMANCE_RELIABILITY",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Lead Listing Lacks Pagination and Status Filtering with Hardcoded 500 Limit",
+          "location": {
+            "file": "backend/src/services/lead.service.js",
+            "lineStart": 14,
+            "lineEnd": 16,
+            "symbol": "getLeadsList"
+          },
+          "evidence": "static async getLeadsList(limit = 500) { return await Lead.find().sort({ createdAt: -1 }).limit(limit) } — no query parameters for page, limit, or status.",
+          "scenario": "When leads exceed 500, older records become permanently inaccessible through the UI and API. Furthermore, retrieving 500 full documents with PII in a single query incurs large serialization and transmission overhead.",
+          "impact": "Data loss from accessibility standpoint (inability to view older records), excessive memory consumption, and network payload bloat.",
+          "reproduction": "Seed 501 leads; call GET /api/admin/leads; verify only the first 500 leads are returned and no mechanism exists to page further.",
+          "remediation": "Implement query-based pagination (page, limit, status) returning { leads, total, page, totalPages }.",
+          "regressionTest": "Verify GET /api/admin/leads?page=2&limit=25 returns records 26-50 with pagination metadata.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-leads-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "relatedFindingIds": [],
+          "module": "leads"
+        },
+        {
+          "id": "lead-impl-01-optional-email-zod-rejection",
+          "fingerprint": "backend-leads-validator-email-empty-string-rejection",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Optional Email Field Rejects Empty String Causing Valid Form Submissions to Fail",
+          "location": {
+            "file": "backend/src/validators/lead.validator.js",
+            "lineStart": 5,
+            "lineEnd": 5,
+            "symbol": "createLeadSchema"
+          },
+          "evidence": "email: z.string().email().optional().default('') — in Zod, safeParse({ email: '' }) fails with 'Invalid email address'.",
+          "scenario": "When an end user fills out a lead form in the browser leaving the optional email input blank, the browser form serializes email as an empty string (email: ''). Zod rejects the request with HTTP 400 VALIDATION_ERROR.",
+          "impact": "Prospective clients who do not provide an email address cannot submit demo/callback requests, resulting in dropped leads and lost business.",
+          "reproduction": "Run createLeadSchema.safeParse({ phone: '9876543210', type: 'demo', email: '' }); observe success is false with ZodError 'Invalid email address'.",
+          "remediation": "Update validator to: email: z.string().email().or(z.literal('')).optional().default('').",
+          "regressionTest": "Assert createLeadSchema.safeParse({ phone: '9876543210', type: 'demo', email: '' }).success is true.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-leads-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "relatedFindingIds": [],
+          "module": "leads"
+        },
+        {
+          "id": "lead-impl-02-optional-name-min-length-rejection",
+          "fingerprint": "backend-leads-validator-name-min2-empty-string-rejection",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Optional Name Field with min(2) Rejects Empty String from Unfilled Form Inputs",
+          "location": {
+            "file": "backend/src/validators/lead.validator.js",
+            "lineStart": 4,
+            "lineEnd": 4,
+            "symbol": "createLeadSchema"
+          },
+          "evidence": "name: z.string().min(2).max(80).optional().default('') — in Zod, safeParse({ name: '' }) fails with 'Too small: expected string to have >=2 characters'.",
+          "scenario": "A user submits a lead request leaving the name field empty. The form sends { name: '' }. Zod evaluates min(2) and fails the request with HTTP 400.",
+          "impact": "Optional name field unexpectedly breaks form submissions when submitted as empty string.",
+          "reproduction": "Run createLeadSchema.safeParse({ phone: '9876543210', type: 'demo', name: '' }); observe validation error.",
+          "remediation": "Update validator to: name: z.string().min(2).max(80).or(z.literal('')).optional().default('').",
+          "regressionTest": "Assert createLeadSchema.safeParse({ phone: '9876543210', type: 'demo', name: '' }).success is true.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-leads-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "relatedFindingIds": [],
+          "module": "leads"
+        },
+        {
+          "id": "lead-impl-03-phone-validation-format-and-trim-gap",
+          "fingerprint": "backend-leads-validator-phone-no-regex-and-trim-mismatch",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Phone Validator Lacks Format Regex and Mismatches Mongoose Trimming Leading to Unhandled Schema Errors",
+          "location": {
+            "file": "backend/src/validators/lead.validator.js",
+            "lineStart": 6,
+            "lineEnd": 6,
+            "symbol": "createLeadSchema"
+          },
+          "evidence": "phone: z.string().min(8).max(20) has no regex or trimming, while Mongoose specifies phone: { type: String, required: true, trim: true }.",
+          "scenario": "1) If an input has 8 spaces ('        '), Zod passes it, but Mongoose trims it to '' and throws a MongooseValidationError. 2) If an input has alphabetic letters ('abcdefgh'), Zod accepts it, inserting invalid phone numbers into the database.",
+          "impact": "Database validation exceptions on whitespace strings and corrupt telephone data in CRM records.",
+          "reproduction": "Submit { phone: '        ', type: 'demo' }; observe Mongoose throws 'phone: Path `phone` is required'. Submit { phone: 'abcdefgh', type: 'demo' }; observe lead is saved with non-numeric phone.",
+          "remediation": "Apply trimming and a strict telephone regex in Zod: phone: z.string().trim().regex(/^\\+?[1-9]\\d{7,14}$/, 'Invalid phone number format').",
+          "regressionTest": "Verify createLeadSchema rejects whitespace-only strings, alphabetic strings, and accepts standard international phone formats.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-leads-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "relatedFindingIds": [],
+          "module": "leads"
+        },
+        {
+          "id": "lead-impl-04-redundant-route-and-service-duplication",
+          "fingerprint": "backend-leads-redundant-route-lead-vs-admin",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Redundant Route Definition and Dead-Code Service Duplication Across Leads and Admin Modules",
+          "location": {
+            "file": "backend/src/routes/leads.js",
+            "lineStart": 20,
+            "lineEnd": 20,
+            "symbol": "router.get"
+          },
+          "evidence": "router.get('/', authenticate, requireAdmin, asyncHandler(c.listLeads)) duplicates router.get('/leads', asyncHandler(c.listLeads)) in routes/admin.js. LeadService.getLeadsList is a verbatim duplicate of AdminService.listLeads.",
+          "scenario": "Two identical endpoints exist for listing leads (/api/leads and /api/admin/leads). The frontend exclusively uses /api/admin/leads. Changes made to one service or controller will not be reflected in the other.",
+          "impact": "Maintenance confusion, dead code paths, and architectural inconsistency.",
+          "reproduction": "Compare backend/src/routes/leads.js:20 with backend/src/routes/admin.js:21 and backend/src/services/lead.service.js:14 with backend/src/services/admin.service.js:95.",
+          "remediation": "Remove the redundant GET / from routes/leads.js or unify lead management under a single dedicated controller and service.",
+          "regressionTest": "Verify administrative lead operations are routed through a single canonical endpoint.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-leads-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "relatedFindingIds": [],
+          "module": "leads"
+        },
+        {
+          "id": "lead-integ-01-frontend-demoform-adminleads-field-mismatch",
+          "fingerprint": "frontend-backend-leads-field-discrepancy",
+          "primaryCategory": "INTEGRATION_DEFECT",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Field Mismatch Between Frontend DemoForm, Lead Model, and AdminLeads Display",
+          "location": {
+            "file": "frontend/src/components/DemoForm.jsx",
+            "lineStart": 168,
+            "lineEnd": 178,
+            "symbol": "handleSubmit"
+          },
+          "evidence": "DemoForm.jsx sends { business, phone, location, category, need, experience, message, type }, while AdminLeads.jsx renders x.name and x.company, completely omitting business, location, category, need, and experience.",
+          "scenario": "A prospective client submits their business name and requirements via DemoForm. When the admin inspects the leads queue in AdminLeads, the Contact column is blank (x.name is empty) and the Company column shows '—' (x.company is empty). The submitted business context is completely invisible.",
+          "impact": "Admins cannot see key lead qualification details entered by prospective clients, impairing sales follow-ups.",
+          "reproduction": "Submit a demo request via DemoForm; navigate to /admin/leads; observe the table shows empty contact and company values while business/need fields are absent.",
+          "remediation": "Update AdminLeads.jsx to render x.business || x.company, and add detail viewing for location, category, need, and experience.",
+          "regressionTest": "Assert that all fields submitted by DemoForm are visible and accessible in the AdminLeads management interface.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-leads-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "relatedFindingIds": [],
+          "module": "leads"
+        },
+        {
+          "id": "lead-test-01-missing-automated-tests",
+          "fingerprint": "backend-leads-zero-test-coverage",
+          "primaryCategory": "MISSING_TEST",
+          "severity": "HIGH",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Complete Absence of Automated Tests for Leads Module",
+          "location": {
+            "file": "backend/src/routes/leads.js",
+            "lineStart": 1,
+            "lineEnd": 22,
+            "symbol": "leadsModule"
+          },
+          "evidence": "Zero test files exist in backend/ for leads.js, leadController.js, lead.service.js, lead.validator.js, or models/CMS/Lead.js.",
+          "scenario": "Any change to validation logic, rate limiting, or controller behavior cannot be automatically verified for regressions during CI or local development.",
+          "impact": "High risk of introducing unnoticed regressions in production, such as silent validation failures or rate-limiting breakdowns.",
+          "reproduction": "Search repository for lead tests; observe zero test suites exist.",
+          "remediation": "Implement automated unit and integration tests covering lead creation, rate limiting, validation rules, and admin authorization.",
+          "regressionTest": "Add test suite backend/tests/leads.test.js with test cases for happy path, validation rejections, rate limiting, and admin access control.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-leads-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "relatedFindingIds": [],
+          "module": "leads"
+        }
+      ],
+      "slug": "leads",
+      "auditRepoId": "MA-Creation",
+      "auditBranch": "main",
+      "auditCommit": "36f55fdcf2a44d01c6279a4a21b417b84d1166ba",
+      "auditRunId": "audit-leads-2026-11-14",
+      "computedVerdict": "FAIL",
+      "verdictNotes": [
+        "At least one required check was skipped, unavailable, blocked or still running.",
+        "At least one verified open Critical/High finding exists."
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "id": "syntax-check-leads",
+      "name": "node --check",
+      "kind": "LINT",
+      "required": true,
+      "status": "PASS",
+      "scope": "backend/src/routes/leads.js",
+      "exitCode": 0,
+      "note": "Syntax verification passed"
+    },
+    {
+      "id": "automated-tests-leads",
+      "name": "lead-unit-tests",
+      "kind": "TEST",
+      "required": true,
+      "status": "NOT_AVAILABLE",
+      "scope": "backend/src/routes/leads.js",
+      "exitCode": null,
+      "note": "No test runner configured"
+    }
+  ],
+  "crossModuleFindings": []
+}

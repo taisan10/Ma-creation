@@ -1,0 +1,528 @@
+{
+  "schemaVersion": "1.0",
+  "run": {
+    "id": "backend-swarm-baseline-20261114",
+    "kind": "backend-swarm",
+    "title": "MA-Creation Backend Baseline Swarm Audit",
+    "startedAt": "2026-11-14T10:45:00Z",
+    "completedAt": "2026-11-14T11:15:00Z",
+    "repo": {
+      "id": "MA-Creation",
+      "root": ".",
+      "branch": "main",
+      "commit": "36f55fdcf2a44d01c6279a4a21b417b84d1166ba",
+      "dirty": true
+    },
+    "scope": {
+      "modules": [
+        "auth",
+        "videos",
+        "payments",
+        "courses",
+        "admin",
+        "catalog",
+        "books",
+        "leads"
+      ],
+      "filesInspected": [
+        "backend/src/routes/auth.js",
+        "backend/src/routes/videos.js",
+        "backend/src/routes/payments.js",
+        "backend/src/routes/courses.js",
+        "backend/src/routes/admin.js",
+        "backend/src/routes/adminLms.js",
+        "backend/src/routes/catalog.js",
+        "backend/src/routes/public.js",
+        "backend/src/routes/books.js",
+        "backend/src/routes/leads.js",
+        "backend/src/app.js",
+        "backend/src/server.js"
+      ],
+      "filesExcluded": [
+        "node_modules/**",
+        "frontend/dist/**"
+      ],
+      "sharedDependencies": [
+        "express",
+        "mongoose",
+        "ioredis",
+        "bullmq",
+        "minio",
+        "razorpay",
+        "argon2",
+        "jsonwebtoken",
+        "zod",
+        "helmet",
+        "cors"
+      ]
+    }
+  },
+  "modules": [
+    {
+      "name": "payments",
+      "slug": "payments",
+      "description": "Backend Payments & Order Verification Module (Razorpay Integration, Entitlements, Webhooks)",
+      "status": "FAIL",
+      "scope": {
+        "files": [
+          "backend/src/routes/payments.js",
+          "backend/src/controllers/paymentController.js",
+          "backend/src/services/payment.service.js",
+          "backend/src/validators/payment.validator.js",
+          "backend/src/models/LMS/Payment.js",
+          "backend/src/models/CMS/Plan.js"
+        ],
+        "sharedDependencies": [
+          "backend/src/app.js",
+          "backend/src/middleware/auth.js",
+          "backend/src/middleware/validate.js",
+          "backend/src/middleware/requireEntitlement.js",
+          "backend/src/models/AUTH/User.js",
+          "backend/src/models/LMS/Course.js",
+          "backend/src/config/env.js"
+        ],
+        "excluded": []
+      },
+      "summary": {
+        "totalFindings": 10,
+        "bySeverity": {
+          "CRITICAL": 1,
+          "HIGH": 4,
+          "MEDIUM": 4,
+          "LOW": 1,
+          "INFO": 0
+        },
+        "byCategory": {
+          "SECURITY_VULNERABILITY": 4,
+          "IMPLEMENTATION_DEFECT": 5,
+          "MISSING_TEST": 1
+        }
+      },
+      "checks": [
+        {
+          "id": "node-syntax-payments",
+          "name": "Node.js Syntax Validation",
+          "kind": "LINT",
+          "required": true,
+          "status": "PASS",
+          "scope": "backend/src/routes/payments.js, paymentController.js, payment.service.js, payment.validator.js, Payment.js, Plan.js",
+          "command": "node --check backend/src/routes/payments.js backend/src/controllers/paymentController.js backend/src/services/payment.service.js backend/src/validators/payment.validator.js backend/src/models/LMS/Payment.js backend/src/models/CMS/Plan.js",
+          "exitCode": 0,
+          "note": "ES module syntax and imports verified clean"
+        },
+        {
+          "id": "npm-check-backend",
+          "name": "Backend Root Syntax Verification",
+          "kind": "LINT",
+          "required": true,
+          "status": "PASS",
+          "scope": "backend",
+          "command": "npm --prefix backend run check",
+          "exitCode": 0,
+          "note": "Server entrypoint node --check passes"
+        }
+      ],
+      "skillExecutions": [
+        {
+          "name": "security-audit",
+          "invocationMode": "SKILL_FILE_LOADED",
+          "status": "EXECUTED",
+          "scope": "backend/src/{routes,controllers,services,validators}/payment*, backend/src/models/{LMS/Payment,CMS/Plan}.js",
+          "findingsProduced": [
+            "finding-payments-race-createorder-01",
+            "finding-payments-webhook-timing-dos-02",
+            "finding-payments-amount-currency-unverified-03",
+            "finding-payments-entitlement-no-expiry-04"
+          ]
+        },
+        {
+          "name": "audit-module",
+          "invocationMode": "SKILL_FILE_LOADED",
+          "status": "EXECUTED",
+          "scope": "payments",
+          "findingsProduced": [
+            "finding-payments-markfailed-lockout-05",
+            "finding-payments-free-plan-crash-06",
+            "finding-payments-webhook-audit-replay-07",
+            "finding-payments-missing-unique-indexes-08",
+            "finding-payments-phone-validation-crash-09",
+            "finding-payments-missing-test-suite-10"
+          ]
+        }
+      ],
+      "findings": [
+        {
+          "id": "finding-payments-race-createorder-01",
+          "fingerprint": "payments-createorder-toctou-race-double-spend",
+          "primaryCategory": "SECURITY_VULNERABILITY",
+          "severity": "CRITICAL",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "TOCTOU Concurrency Race Condition in Order Creation Leading to Duplicate Charging and Double Spend",
+          "location": {
+            "file": "backend/src/services/payment.service.js",
+            "lineStart": 46,
+            "lineEnd": 71,
+            "symbol": "PaymentService.createOrder"
+          },
+          "evidence": "createOrder queries: Payment.findOne({ plan: plan._id, status: 'paid', user: userId }). It checks only for 'paid', ignoring existing pending ('created') orders. receipt is generated as `mac_${Date.now()}`, which bypasses Razorpay DUPLICATE_ORDER deduplication. No distributed lock or unique DB index exists.",
+          "scenario": "A student double-clicks 'Buy Now' or submits concurrent automated order creation requests. Both requests find no 'paid' record, generate distinct `mac_${Date.now()}` receipts, and create two distinct Razorpay orders. The student's card/UPI is debited twice for the same plan, creating two separate 'paid' records in MongoDB with duplicate charges.",
+          "impact": "Direct customer financial loss, dispute and chargeback liabilities, and corrupt payment accounting.",
+          "reproduction": "Send 2 concurrent POST /api/payments/order requests with identical { planId } and Bearer token; both succeed with HTTP 201 and create two active Razorpay orders.",
+          "remediation": "1. Check for active 'created' orders within a 30-minute lock window before creating an order. 2. Use deterministic receipt key: `mac_${userId}_${planId}` so Razorpay returns DUPLICATE_ORDER on concurrent calls. 3. Acquire a distributed lock on Redis key `lock:payment:order:${userId}:${planId}`.",
+          "regressionTest": "Execute 10 concurrent POST /api/payments/order requests for the same user and plan; assert exactly 1 returns 201 and 9 return 409 Conflict.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-payments-lead"
+          ],
+          "sourceSkills": [
+            "security-audit"
+          ],
+          "module": "payments"
+        },
+        {
+          "id": "finding-payments-webhook-timing-dos-02",
+          "fingerprint": "payments-webhook-timingsafeequal-buffer-length-crash",
+          "primaryCategory": "SECURITY_VULNERABILITY",
+          "severity": "HIGH",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Unhandled Buffer Length Mismatch in Webhook HMAC Verification Causes Uncaught Exception / DoS",
+          "location": {
+            "file": "backend/src/services/payment.service.js",
+            "lineStart": 204,
+            "lineEnd": 213,
+            "symbol": "PaymentService.handleWebhook"
+          },
+          "evidence": "handleWebhook computes `expected` (64-char hex string) and evaluates: if (expected.length !== signature.length || !crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature))). It compares string character length instead of byte length. If an attacker submits a 64-char multi-byte UTF-8 string (e.g. 64 double-byte chars = 128 bytes), the character length check passes, and crypto.timingSafeEqual throws an unhandled RangeError [ERR_CRYPTO_TIMING_SAFE_EQUAL_LENGTH].",
+          "scenario": "An external attacker sends POST /api/payments/webhook with header `x-razorpay-signature` consisting of 64 two-byte UTF-8 characters. The endpoint crashes with an uncaught RangeError, causing an unhandled 500 error and webhook processing pipeline failure.",
+          "impact": "Denial of Service on payment webhook handler, unhandled error logging, and service degradation.",
+          "reproduction": "Send POST /api/payments/webhook with header `x-razorpay-signature: \\u00e9...` (64 characters) and body `{}`; observe unhandled RangeError crash.",
+          "remediation": "Validate signature format with regex `/^[0-9a-fA-F]{64}$/`. Parse both strings into hex buffers: `const expBuf = Buffer.from(expected, 'hex'); const sigBuf = Buffer.from(signature, 'hex'); if (expBuf.length !== sigBuf.length || !crypto.timingSafeEqual(expBuf, sigBuf)) throw new AppError('Invalid webhook signature', 400);`",
+          "regressionTest": "Submit webhook with 64-char multi-byte UTF-8 signature; assert HTTP 400 Bad Request returned cleanly without throwing RangeError.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-payments-lead"
+          ],
+          "sourceSkills": [
+            "security-audit"
+          ],
+          "module": "payments"
+        },
+        {
+          "id": "finding-payments-amount-currency-unverified-03",
+          "fingerprint": "payments-verify-amount-currency-validation-missing",
+          "primaryCategory": "SECURITY_VULNERABILITY",
+          "severity": "HIGH",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Complete Absence of Amount and Currency Verification During Payment Verification and Webhook Capture",
+          "location": {
+            "file": "backend/src/services/payment.service.js",
+            "lineStart": 110,
+            "lineEnd": 224,
+            "symbol": "PaymentService.verifyPayment, handleWebhook"
+          },
+          "evidence": "verifyPayment only verifies HMAC of `orderId|paymentId` and never calls Razorpay API to confirm captured amount or currency. handleWebhook extracts `entity = req.body?.payload?.payment?.entity` and marks payment 'paid' without verifying `entity.amount === Math.round(payment.amount * 100)` or `entity.currency === payment.currency`.",
+          "scenario": "If a transaction is partially captured, paid in an unauthorized currency, or if gateway amounts desynchronize, the backend blindly marks the plan as fully paid without verifying that the captured amount matches the required plan price.",
+          "impact": "Financial leakage, underpayment vulnerabilities, and inability to reconcile financial accounting records.",
+          "reproduction": "Trace verifyPayment and handleWebhook; note that neither method inspects or compares `amount` or `currency` against `payment.amount`.",
+          "remediation": "In handleWebhook: verify `entity.amount === Math.round(payment.amount * 100)` and `entity.currency === payment.currency` before setting status 'paid'. In verifyPayment: fetch payment details via `getRazorpayClient().payments.fetch(razorpayPaymentId)` and assert `amount` and `status === 'captured'`.",
+          "regressionTest": "Send webhook with `entity.amount` differing from `payment.amount * 100`; assert payment status is NOT changed to 'paid' and error is logged.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-payments-lead"
+          ],
+          "sourceSkills": [
+            "security-audit"
+          ],
+          "module": "payments"
+        },
+        {
+          "id": "finding-payments-entitlement-no-expiry-04",
+          "fingerprint": "payments-entitlement-infinite-validity-no-duration",
+          "primaryCategory": "SECURITY_VULNERABILITY",
+          "severity": "HIGH",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Permanent Lifetime Entitlement Granted Without Subscription/Plan Duration Expiration or Revocation",
+          "location": {
+            "file": "backend/src/middleware/requireEntitlement.js",
+            "lineStart": 13,
+            "lineEnd": 44,
+            "symbol": "requireCourseEntitlement, requireVideoEntitlement"
+          },
+          "evidence": "Ownership is checked via: Payment.exists({ user: req.user.sub, plan: course.plan, status: 'paid' }). The Payment schema contains no `expiresAt`, `validUntil`, or `isRevoked` fields. Plans with `billing` and `duration` (e.g. 1 month retainer) grant permanent, perpetual access with no expiration or revocation mechanism.",
+          "scenario": "A customer purchases a 30-day course or 1-month retainer plan. After 30 days, 1 year, or indefinitely, the customer retains full DRM video and course streaming access because Payment.exists always returns true.",
+          "impact": "Severe revenue leakage, inability to offer recurring subscriptions or time-limited access, and breach of retainer service agreements.",
+          "reproduction": "Create plan with duration '30 days'. Pay for plan. Simulate 60 days passing; send GET /api/videos/:id/hls; entitlement is still granted.",
+          "remediation": "Add `expiresAt: Date` and `isRevoked: Boolean` to Payment schema. Populate `expiresAt` upon order completion based on `plan.duration`. Update requireEntitlement to require `{ user: req.user.sub, plan: course.plan, status: 'paid', isRevoked: { $ne: true }, $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] }`.",
+          "regressionTest": "Verify access for payment with `expiresAt` set to past timestamp returns HTTP 403 NOT_ENTITLED.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-payments-lead"
+          ],
+          "sourceSkills": [
+            "security-audit"
+          ],
+          "module": "payments"
+        },
+        {
+          "id": "finding-payments-markfailed-lockout-05",
+          "fingerprint": "payments-markfailed-toctou-permanent-failure-lockout",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Irreversible Failure Lockout via markPaymentFailed Blocks Legitimate Payment Completion",
+          "location": {
+            "file": "backend/src/services/payment.service.js",
+            "lineStart": 142,
+            "lineEnd": 176,
+            "symbol": "PaymentService.markPaymentFailed, verifyPayment"
+          },
+          "evidence": "markPaymentFailed sets `status: 'failed'` for { razorpayOrderId, user: userId, status: 'created' }. verifyPayment queries only `{ status: 'created' }` with fallback `{ status: 'paid' }`. If markPaymentFailed is invoked (e.g. client modal canceled or network timeout) while payment is debited by Razorpay, verifyPayment throws 404 NOT_FOUND and webhook ignore the capture.",
+          "scenario": "A user's browser closes or triggers the payment failed handler during checkout. Meanwhile, Razorpay charges the customer's account. When the user returns to verify payment or when Razorpay sends `payment.captured`, the database refuses to transition the order from 'failed' to 'paid', leaving the student debited without access.",
+          "impact": "Customer charged without access, high support overhead, and unrecoverable order state.",
+          "reproduction": "Call POST /api/payments/failed for an order. Then call POST /api/payments/verify with valid Razorpay payment signature; server returns 404 NOT_FOUND.",
+          "remediation": "Allow verifyPayment and handleWebhook to transition an order from 'failed' to 'paid' if a cryptographically verified Razorpay signature or webhook confirms successful capture.",
+          "regressionTest": "Mark order failed, then call verifyPayment with valid HMAC signature; assert order transitions to 'paid' and returns 200 OK.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-payments-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "module": "payments"
+        },
+        {
+          "id": "finding-payments-free-plan-crash-06",
+          "fingerprint": "payments-createorder-zero-price-gateway-error",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Unhandled Zero-Price (Free) Plan Crash in Razorpay Order Creation",
+          "location": {
+            "file": "backend/src/services/payment.service.js",
+            "lineStart": 62,
+            "lineEnd": 71,
+            "symbol": "PaymentService.createOrder"
+          },
+          "evidence": "Plan model permits `price: { type: Number, required: true, min: 0 }`. In createOrder: `amount: Math.round(plan.price * 100)`. When price is 0, amount is 0. Razorpay API rejects orders under 100 paise with BAD_REQUEST_ERROR: amount should be at least 100. createOrder throws uncaught gateway error, crashing with HTTP 500.",
+          "scenario": "Admin creates a free trial or promotional plan with price 0. Any student attempting to enroll in this plan receives HTTP 500 because Razorpay rejects amount 0.",
+          "impact": "Inability to offer free courses or trial plans; unhandled 500 internal server errors.",
+          "reproduction": "Create Plan with price 0. Call POST /api/payments/order; observe Razorpay API error and 500 response.",
+          "remediation": "In createOrder, check if `plan.price === 0`. If free, immediately create Payment with `status: 'paid'`, `amount: 0`, and return success without invoking Razorpay API.",
+          "regressionTest": "Call createOrder for plan with price 0; assert 201 Created with instant 'paid' status and no Razorpay order creation.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-payments-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "module": "payments"
+        },
+        {
+          "id": "finding-payments-webhook-audit-replay-07",
+          "fingerprint": "payments-webhook-missing-audit-logging-deduplication",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Missing Webhook Payload Audit Trail & Replay Event Deduplication Table",
+          "location": {
+            "file": "backend/src/services/payment.service.js",
+            "lineStart": 215,
+            "lineEnd": 231,
+            "symbol": "PaymentService.handleWebhook"
+          },
+          "evidence": "Payment.js defines `rawWebhook: Object`, but handleWebhook never writes to it or records incoming payloads. Razorpay header `x-razorpay-event-id` is never extracted or checked against a deduplication table, preventing auditability of webhook retries.",
+          "scenario": "Razorpay retries a webhook or network issues duplicate deliveries. There is no audit record showing what timestamp, headers, or payloads Razorpay transmitted, making financial disputes and reconciliation unresolvable.",
+          "impact": "Zero forensic traceability for automated financial transactions; inability to debug payment capture issues.",
+          "reproduction": "Post valid webhook to /api/payments/webhook. Inspect Payment document; rawWebhook is undefined and no WebhookLog exists.",
+          "remediation": "Persist `rawWebhook: entity` on Payment document and store incoming events in a dedicated WebhookEvent collection with unique index on `eventId`.",
+          "regressionTest": "Process webhook; assert `rawWebhook` is persisted on the payment document.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-payments-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "module": "payments"
+        },
+        {
+          "id": "finding-payments-missing-unique-indexes-08",
+          "fingerprint": "payments-mongoose-missing-unique-order-payment-indexes",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Missing Unique Constraints on razorpayOrderId and razorpayPaymentId",
+          "location": {
+            "file": "backend/src/models/LMS/Payment.js",
+            "lineStart": 10,
+            "lineEnd": 20,
+            "symbol": "schema"
+          },
+          "evidence": "In Payment.js: `razorpayOrderId: { type: String, index: true }` and `razorpayPaymentId: { type: String, index: true }`. Neither field defines `unique: true`. Compound entitlement indexes are commented out in the schema file.",
+          "scenario": "Under race conditions or duplicate webhook replays, multiple Payment documents can store the exact same order ID or payment ID. Queries returning single documents yield non-deterministic results.",
+          "impact": "Data inconsistency, duplicate payment records, and corrupted payment-to-order mapping.",
+          "reproduction": "Insert two Payment documents with identical razorpayOrderId; MongoDB accepts both without error.",
+          "remediation": "Add `unique: true, sparse: true` to razorpayOrderId and razorpayPaymentId. Uncomment and enforce schema compound indexes.",
+          "regressionTest": "Attempt to insert two Payment records with identical razorpayOrderId; assert MongoDB throws E11000 duplicate key error.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-payments-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "module": "payments"
+        },
+        {
+          "id": "finding-payments-phone-validation-crash-09",
+          "fingerprint": "payments-createorder-phone-validation-crash",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Mongoose Validation Failure in createOrder when User Lacks Phone Number",
+          "location": {
+            "file": "backend/src/services/payment.service.js",
+            "lineStart": 43,
+            "lineEnd": 88,
+            "symbol": "PaymentService.createOrder"
+          },
+          "evidence": "In Payment.js, `phone: { type: String, required: true, trim: true }`. In createOrder: `const finalPhone = dbUser.phone || phone || ''`. In payment.validator.js: `phone` is optional. If user has no phone in DB and omits it from body, finalPhone is empty string. Mongoose rejects empty string on required path, throwing ValidationError after Razorpay order creation.",
+          "scenario": "A user without a saved phone initiates checkout without passing a phone in the request. Razorpay creates an order, but Payment.create fails with Mongoose ValidationError. The user receives HTTP 500 and the Razorpay order is orphaned.",
+          "impact": "Orphaned Razorpay orders and 500 internal server errors during checkout for users without phone numbers.",
+          "reproduction": "Set user.phone = '' or undefined. Call POST /api/payments/order with { planId } without phone. Observe 500 ValidationError.",
+          "remediation": "In createOrderSchema, validate that phone is present or default to a fallback placeholder if DB user lacks phone.",
+          "regressionTest": "Call createOrder with no user phone and no request phone; assert HTTP 400 Bad Request with descriptive message before invoking Razorpay.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-payments-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "module": "payments"
+        },
+        {
+          "id": "finding-payments-missing-test-suite-10",
+          "fingerprint": "payments-missing-automated-test-suite",
+          "primaryCategory": "MISSING_TEST",
+          "severity": "HIGH",
+          "confidence": "HIGH",
+          "verification": "VERIFIED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "title": "Total Absence of Automated Unit, Integration, and Webhook Tests for Payments Module",
+          "location": {
+            "file": "backend/src/routes/payments.js",
+            "lineStart": 1,
+            "lineEnd": 16,
+            "symbol": "paymentRoutes"
+          },
+          "evidence": "Zero test files exist in the repository covering payment order creation, signature verification, webhook processing, markFailed, or entitlement granting. All 5 payment endpoints have MISSING test coverage.",
+          "scenario": "Any code changes to Razorpay SDK, secret configurations, Mongoose schemas, or signature verification algorithms are deployed to production without automated verification, risking catastrophic payment checkout failures.",
+          "impact": "Critical regression risks in the core revenue-generating module of the platform.",
+          "reproduction": "Search repository for payment test files; none exist.",
+          "remediation": "Implement an automated test suite with mock Razorpay client covering order creation, HMAC signature verification, webhook handling, and entitlement checks.",
+          "regressionTest": "Run npm test and assert 100% route and branch coverage for payment routes.",
+          "discoveredByTest": false,
+          "sourceAgents": [
+            "module-payments-lead"
+          ],
+          "sourceSkills": [
+            "audit-module"
+          ],
+          "module": "payments"
+        }
+      ],
+      "testMatrix": [
+        {
+          "endpoint": "POST /api/payments/order",
+          "status": "MISSING",
+          "notes": "No automated test for order creation, plan existence check, 401 unauthenticated, already purchased 409, or race conditions"
+        },
+        {
+          "endpoint": "POST /api/payments/verify",
+          "status": "MISSING",
+          "notes": "No automated test for valid HMAC signature, invalid signature 400, length mismatch, or race condition fallback to paid"
+        },
+        {
+          "endpoint": "POST /api/payments/failed",
+          "status": "MISSING",
+          "notes": "No automated test for marking order failed, user ownership check, or order already paid guard"
+        },
+        {
+          "endpoint": "GET /api/payments/mine",
+          "status": "MISSING",
+          "notes": "No automated test for listing user payments, populated plan details, or authentication check"
+        },
+        {
+          "endpoint": "POST /api/payments/webhook",
+          "status": "MISSING",
+          "notes": "No automated test for rawBody HMAC verification, payment.captured, payment.failed, signature mismatch, or timing attack buffer safety"
+        }
+      ],
+      "coverage": {},
+      "auditRepoId": "MA-Creation",
+      "auditBranch": "main",
+      "auditCommit": "36f55fdcf2a44d01c6279a4a21b417b84d1166ba",
+      "auditRunId": "backend-swarm-baseline-20261114",
+      "computedVerdict": "FAIL",
+      "verdictNotes": [
+        "At least one verified open Critical/High finding exists."
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "id": "node-syntax-payments",
+      "name": "Node.js Syntax Validation",
+      "kind": "LINT",
+      "required": true,
+      "status": "PASS",
+      "scope": "backend/src/routes/payments.js, paymentController.js, payment.service.js, payment.validator.js, Payment.js, Plan.js",
+      "command": "node --check backend/src/routes/payments.js backend/src/controllers/paymentController.js backend/src/services/payment.service.js backend/src/validators/payment.validator.js backend/src/models/LMS/Payment.js backend/src/models/CMS/Plan.js",
+      "exitCode": 0,
+      "note": "ES module syntax and imports verified clean"
+    },
+    {
+      "id": "npm-check-backend",
+      "name": "Backend Root Syntax Verification",
+      "kind": "LINT",
+      "required": true,
+      "status": "PASS",
+      "scope": "backend",
+      "command": "npm --prefix backend run check",
+      "exitCode": 0,
+      "note": "Server entrypoint node --check passes"
+    }
+  ],
+  "crossModuleFindings": []
+}

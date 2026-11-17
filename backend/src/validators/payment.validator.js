@@ -4,8 +4,8 @@ export const createOrderSchema = z.object({
   planId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid plan ID'),
   name: z.string().min(2).max(80).optional(),
   email: z.string().email().optional(),
-  phone: z.string().max(20).optional(),
-  company: z.string().max(120).optional(),
+  phone: z.string().max(20).nullable().optional(),
+  company: z.string().max(120).nullable().optional(),
 })
 
 export const verifyPaymentSchema = z.object({

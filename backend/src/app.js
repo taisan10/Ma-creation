@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -108,11 +109,12 @@ app.get("/api/health", (req, res) => {
     .status(connected ? 200 : 503)
     .json({
       success: connected,
-      status: connected ? "Hello Gorilla Gandu" : "database_unavailable",
+      status: connected ? "Hello Gorilla" : "database_unavailable",
       service: "ma-creation-api",
       database: mongoose.connection.readyState,
     });
 });
+
 
 app.use("/api/auth", authRoutes);
 app.use("/api/leads", leadRoutes);
@@ -125,7 +127,15 @@ app.use("/api/admin/books", adminBooksRouter);
 app.use("/api/admin/lms", adminLmsRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/videos", videoRoutes);
-app.use("/api-docs", swaggerRouter);
+
+// localhost pr show hoga 
+if (process.env.NODE_ENV !== "production") {
+  app.use("/api-docs", swaggerRouter);
+}
+
+
+
+Sentry.setupExpressErrorHandler(app);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Antigravity QA Orchestrator Config",
+  "type": "object",
+  "required": [
+    "version",
+    "orchestration",
+    "safety",
+    "reports"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "project": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "packageManager": {
+          "type": "string"
+        },
+        "backendRoot": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "orchestration": {
+      "type": "object",
+      "properties": {
+        "nativeSwarmPreferred": {
+          "type": "boolean"
+        },
+        "allowSupportedSubagentFallback": {
+          "type": "boolean"
+        },
+        "remoteReasoningConcurrency": {
+          "type": "string"
+        },
+        "localHeavyProcessSlots": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        },
+        "browserSlots": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2
+        },
+        "dockerBuildSlots": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2
+        }
+      },
+      "additionalProperties": false
+    },
+    "profiles": {
+      "type": "object"
+    },
+    "safety": {
+      "type": "object",
+      "properties": {
+        "readOnlyApplicationSource": {
+          "const": true
+        },
+        "readOnlyExistingTests": {
+          "const": true
+        },
+        "productionAccess": {
+          "const": false
+        },
+        "remoteVpsScanning": {
+          "const": false
+        },
+        "destructiveDatabaseCommands": {
+          "const": false
+        },
+        "destructiveDockerCleanup": {
+          "const": false
+        },
+        "requireVerifiedTestIsolation": {
+          "const": true
+        },
+        "allowLocalComposeRehearsal": {
+          "type": "boolean"
+        },
+        "allowLocalDast": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "reports": {
+      "type": "object",
+      "properties": {
+        "directory": {
+          "type": "string"
+        },
+        "monochrome": {
+          "const": true
+        },
+        "indexFile": {
+          "type": "string"
+        },
+        "persistJson": {
+          "const": true
+        },
+        "immutableRuns": {
+          "const": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "$schema": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

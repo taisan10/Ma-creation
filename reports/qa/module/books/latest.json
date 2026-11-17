@@ -1,0 +1,361 @@
+{
+  "schemaVersion": "1.0",
+  "run": {
+    "id": "backend-swarm-baseline-20261114-final",
+    "kind": "backend-swarm",
+    "title": "MA-Creation Backend Baseline Swarm Audit",
+    "startedAt": "2026-11-14T10:45:00Z",
+    "completedAt": "2026-11-14T11:15:00Z",
+    "repo": {
+      "id": "MA-Creation",
+      "root": ".",
+      "branch": "main",
+      "commit": "36f55fdcf2a44d01c6279a4a21b417b84d1166ba",
+      "dirty": true
+    },
+    "scope": {
+      "modules": [
+        "auth",
+        "videos",
+        "payments",
+        "courses",
+        "admin",
+        "catalog",
+        "books",
+        "leads"
+      ],
+      "filesInspected": [
+        "backend/src/routes/auth.js",
+        "backend/src/routes/videos.js",
+        "backend/src/routes/payments.js",
+        "backend/src/routes/courses.js",
+        "backend/src/routes/admin.js",
+        "backend/src/routes/adminLms.js",
+        "backend/src/routes/catalog.js",
+        "backend/src/routes/public.js",
+        "backend/src/routes/books.js",
+        "backend/src/routes/leads.js",
+        "backend/src/app.js",
+        "backend/src/server.js"
+      ],
+      "filesExcluded": [
+        "node_modules/**",
+        "frontend/dist/**"
+      ],
+      "sharedDependencies": [
+        "express",
+        "mongoose",
+        "ioredis",
+        "bullmq",
+        "minio",
+        "razorpay",
+        "argon2",
+        "jsonwebtoken",
+        "zod",
+        "helmet",
+        "cors"
+      ]
+    }
+  },
+  "modules": [
+    {
+      "name": "books",
+      "slug": "books",
+      "status": "FAIL",
+      "scope": {
+        "files": [
+          "backend/src/routes/books.js",
+          "backend/src/controllers/bookController.js",
+          "backend/src/services/book.service.js",
+          "backend/src/validators/book.validator.js",
+          "backend/src/models/LMS/Book.js"
+        ],
+        "sharedDependencies": [
+          "backend/src/config/minio.js",
+          "backend/src/middleware/auth.js",
+          "backend/src/middleware/upload.middleware.js"
+        ],
+        "excluded": []
+      },
+      "testMatrix": [
+        {
+          "endpoint": "GET /api/public/books",
+          "status": "MISSING",
+          "notes": "Public books listing and filtering"
+        },
+        {
+          "endpoint": "GET /api/public/books/:id/read",
+          "status": "MISSING",
+          "notes": "PDF stream and content disposition"
+        },
+        {
+          "endpoint": "GET /api/public/books/:id/download",
+          "status": "MISSING",
+          "notes": "PDF download and counter increment"
+        },
+        {
+          "endpoint": "GET /api/admin/books",
+          "status": "MISSING",
+          "notes": "Admin books list and pagination"
+        },
+        {
+          "endpoint": "POST /api/admin/books/upload",
+          "status": "MISSING",
+          "notes": "Admin PDF upload and storage"
+        },
+        {
+          "endpoint": "DELETE /api/admin/books/:id",
+          "status": "MISSING",
+          "notes": "Admin book deletion"
+        }
+      ],
+      "findings": [
+        {
+          "id": "BOOK-SEC-001",
+          "fingerprint": "book-content-disposition-non-ascii-crash",
+          "title": "Unhandled Unicode Character in Inline Content-Disposition Crashes Server with ERR_INVALID_CHAR",
+          "severity": "HIGH",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "location": {
+            "file": "backend/src/controllers/bookController.js",
+            "lineStart": 15,
+            "lineEnd": 20,
+            "symbol": "streamBook"
+          },
+          "evidence": "res.setHeader('Content-Disposition', mode === 'download' ? contentDispositionFilename(book.filename) : `inline; filename=\"${cleanFilename(book.filename).replace(/\"/g, '')}\"; filename*=UTF-8''${encodeURIComponent(cleanFilename(book.filename))}`). cleanFilename retains Unicode codepoints > 255. Node.js OutgoingMessage.setHeader throws TypeError [ERR_INVALID_CHAR].",
+          "impact": "Denial of service for reading any non-ASCII or regional-language PDF books.",
+          "reproduction": "Create or update a book record with filename 'GeM_मार्गदर्शिका.pdf'. Send GET /api/public/books/<id>/read. The server throws uncaught exception 'ERR_INVALID_CHAR: Invalid character in header content' and fails with 500.",
+          "remediation": "Sanitize the legacy filename parameter to ASCII-only alphanumeric characters in inline mode (matching contentDispositionFilename fallback: filename.replace(/[^a-zA-Z0-9._ -]/g, '_')), while providing full Unicode in the RFC 5987 filename*=UTF-8'' parameter.",
+          "regressionTest": "Configure a book with filename 'हिन्दी_गाइड.pdf' and send GET /api/public/books/:id/read. Assert response is HTTP 200 with valid Content-Disposition header.",
+          "verification": "SUSPECTED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "module": "books",
+          "scenario": ""
+        },
+        {
+          "id": "BOOK-SEC-002",
+          "fingerprint": "book-upload-storage-leak-unvalidated-metadata",
+          "title": "MinIO S3 Storage Leak: Uploaded Objects Orphaned When Controller Metadata Validation Fails",
+          "severity": "HIGH",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "location": {
+            "file": "backend/src/middleware/upload.middleware.js",
+            "lineStart": 380,
+            "lineEnd": 437,
+            "symbol": "uploadBookFiles"
+          },
+          "evidence": "In uploadBookFiles, Busboy streams the PDF to MinIO before body fields are fully validated. Upon busboy 'finish', req.file is populated and next() is invoked. If BookService.createBook throws AppError('A valid book title is required', 400), completed is already true, and neither the middleware nor controller catches the error to call minioClient.removeObject(VIDEO_BUCKET, fileKey).",
+          "impact": "Unbounded storage exhaustion in MinIO S3 object storage; financial and operational overhead from orphaned storage pollution.",
+          "reproduction": "Submit POST /api/admin/books/upload with a valid PDF in 'file' and body.title omitted. API returns 400 BOOK_TITLE_REQUIRED, but file object remains stored in MinIO bucket.",
+          "remediation": "In uploadBook controller or BookService.createBook, wrap document creation in a try/catch block. If Book.create fails and req.file.fileKey exists, immediately invoke minioClient.removeObject(VIDEO_BUCKET, req.file.fileKey).catch(...) before re-throwing.",
+          "regressionTest": "Send POST /api/admin/books/upload with missing title. Assert HTTP 400 and verify minioClient.statObject confirms object does not exist in bucket.",
+          "verification": "SUSPECTED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "module": "books",
+          "scenario": ""
+        },
+        {
+          "id": "BOOK-SEC-003",
+          "fingerprint": "book-listbooks-unbounded-query-no-pagination",
+          "title": "Unbounded Database Query in Admin Book Listing Lacks Pagination and Limit Controls",
+          "severity": "MEDIUM",
+          "primaryCategory": "PERFORMANCE_AND_SCALABILITY",
+          "location": {
+            "file": "backend/src/services/book.service.js",
+            "lineStart": 80,
+            "lineEnd": 82,
+            "symbol": "listBooks"
+          },
+          "evidence": "static async listBooks() { return await Book.find().sort({ createdAt: -1 }).populate('uploadedBy', 'name email').lean() }",
+          "impact": "Memory bloat in Node.js V8 heap, database connection latency spikes, and potential denial-of-service under administrative concurrency.",
+          "reproduction": "Seed 1,000 book records and call GET /api/admin/books. Observe large payload and excessive memory utilization.",
+          "remediation": "Introduce pagination query parameters (page, limit with max 100) using .skip((page - 1) * limit).limit(limit) and return { books, total, page, totalPages }.",
+          "regressionTest": "Call GET /api/admin/books?page=1&limit=10. Assert response returns exactly 10 books and pagination metadata.",
+          "verification": "SUSPECTED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "module": "books",
+          "scenario": ""
+        },
+        {
+          "id": "BOOK-SEC-004",
+          "fingerprint": "book-public-getpublicbook-information-disclosure",
+          "title": "Information Disclosure: Public Books Endpoint Leaks S3 Object Keys, Backend Storage Type, and Admin User IDs",
+          "severity": "MEDIUM",
+          "primaryCategory": "SECURITY_VULNERABILITY",
+          "location": {
+            "file": "backend/src/services/book.service.js",
+            "lineStart": 31,
+            "lineEnd": 39,
+            "symbol": "getPublicBook"
+          },
+          "evidence": "getPublicBook executes Book.findOne({ active: true }).sort({ createdAt: -1 }).lean() and spreads the entire Mongoose document into the public JSON response: return { ...book, readUrl: ..., downloadUrl: ... }. This exposes fileKey, storage, fileId, and uploadedBy.",
+          "impact": "CWE-200 Information Exposure facilitating administrative account enumeration and internal storage layout mapping.",
+          "reproduction": "Execute unauthenticated GET /api/public/books. Observe fileKey, storage, uploadedBy, and __v present in response body.",
+          "remediation": "Use explicit DTO projection in getPublicBook to whitelist only public fields: _id, title, description, filename, mimeType, size, coverImageUrl, downloads, createdAt, readUrl, downloadUrl.",
+          "regressionTest": "Call GET /api/public/books and assert fileKey, storage, fileId, uploadedBy, and __v are strictly undefined.",
+          "verification": "SUSPECTED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "module": "books",
+          "scenario": ""
+        },
+        {
+          "id": "BOOK-SEC-005",
+          "fingerprint": "book-stream-resource-leak-on-client-abort",
+          "title": "Socket and Stream Resource Leak on Client Connection Abort During PDF Delivery",
+          "severity": "MEDIUM",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "location": {
+            "file": "backend/src/controllers/bookController.js",
+            "lineStart": 28,
+            "lineEnd": 34,
+            "symbol": "streamBook"
+          },
+          "evidence": "streamBook attaches stream.on('error', ...) and executes stream.pipe(res). When a client abruptly terminates or closes the connection during streaming of large 50MB files, res emits 'close', but stream is neither unpiped nor destroyed.",
+          "impact": "Socket and memory leaks leading to event-loop lag and connection starvation.",
+          "reproduction": "Initiate GET /api/public/books/:id/read, read 32KB, and terminate socket connection. Observe MinIO client stream remains un-destroyed.",
+          "remediation": "Replace stream.pipe(res) with pipeline from 'node:stream/promises' or bind res.on('close', () => { if (!res.writableEnded) stream.destroy(); }).",
+          "regressionTest": "Simulate client socket closure during streamBook execution and verify stream.destroyed evaluates to true.",
+          "verification": "SUSPECTED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "module": "books",
+          "scenario": ""
+        },
+        {
+          "id": "BOOK-SEC-006",
+          "fingerprint": "book-download-counter-unthrottled-inflation",
+          "title": "Unauthenticated and Unthrottled Download Counter Manipulation via HEAD Requests",
+          "severity": "LOW",
+          "primaryCategory": "BUSINESS_LOGIC_DEFECT",
+          "location": {
+            "file": "backend/src/controllers/bookController.js",
+            "lineStart": 22,
+            "lineEnd": 26,
+            "symbol": "streamBook"
+          },
+          "evidence": "In streamBook: if (mode === 'download') { res.on('finish', () => { BookService.incrementDownloads(book._id) }) }. Express routes GET endpoints to HEAD requests automatically, emitting 'finish' without body transmission.",
+          "impact": "Data integrity violation and artificial skew of business analytics; unnecessary database write load.",
+          "reproduction": "Send 20 consecutive HTTP HEAD requests to /api/public/books/<id>/download. Query book record and observe downloads count incremented by 20.",
+          "remediation": "Restrict incrementDownloads to req.method === 'GET' and apply Redis-backed IP rate-limiting or debounce per client IP/session.",
+          "regressionTest": "Send HEAD request to /api/public/books/:id/download. Verify downloads count does not increment.",
+          "verification": "SUSPECTED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "module": "books",
+          "scenario": ""
+        },
+        {
+          "id": "BOOK-SEC-007",
+          "fingerprint": "book-admin-inactive-preview-broken",
+          "title": "Broken Admin Preview: Inactive Books Cannot Be Streamed or Verified by Administrators",
+          "severity": "LOW",
+          "primaryCategory": "IMPLEMENTATION_DEFECT",
+          "location": {
+            "file": "backend/src/services/book.service.js",
+            "lineStart": 46,
+            "lineEnd": 47,
+            "symbol": "getBookForStream"
+          },
+          "evidence": "const book = await Book.findOne({ _id: id, active: true }). If active is false, it throws 404 NOT_FOUND. However, AdminBooks.jsx links Read and Download buttons to /api/public/books/:id/read for all books, and adminBooksRouter lacks any read/stream endpoint.",
+          "impact": "Defective administrative workflow requiring premature public publication to inspect documents.",
+          "reproduction": "Upload or patch a book to active: false. Visit /api/public/books/<id>/read. Response is 404 NOT_FOUND.",
+          "remediation": "Expose authenticated admin routes GET /api/admin/books/:id/read and GET /api/admin/books/:id/download backed by Book.findById(id) without active: true restriction.",
+          "regressionTest": "Authenticate as admin and request GET /api/admin/books/:id/read on an inactive book. Verify HTTP 200 stream.",
+          "verification": "SUSPECTED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "module": "books",
+          "scenario": ""
+        },
+        {
+          "id": "BOOK-SEC-008",
+          "fingerprint": "book-missing-active-createdat-compound-index",
+          "title": "Missing Compound Database Index on { active: 1, createdAt: -1 } for Public Hero Query",
+          "severity": "LOW",
+          "primaryCategory": "PERFORMANCE_AND_SCALABILITY",
+          "location": {
+            "file": "backend/src/models/LMS/Book.js",
+            "lineStart": 13,
+            "lineEnd": 13,
+            "symbol": "active"
+          },
+          "evidence": "active is indexed as a single key (index: true), but getPublicBook executes Book.findOne({ active: true }).sort({ createdAt: -1 }). This triggers an in-memory sort stage on MongoDB.",
+          "impact": "Suboptimal query execution and avoidable database CPU consumption.",
+          "reproduction": "Run explain('executionStats') on Book.findOne({ active: true }).sort({ createdAt: -1 }). Note SORT operation stage.",
+          "remediation": "Add schema.index({ active: 1, createdAt: -1 }) and schema.index({ createdAt: -1 }) to Book.js schema.",
+          "regressionTest": "Inspect Book collection indexes and verify compound index { active: 1, createdAt: -1 } is active.",
+          "verification": "SUSPECTED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "module": "books",
+          "scenario": ""
+        },
+        {
+          "id": "BOOK-SEC-009",
+          "fingerprint": "book-cache-control-stale-delivery",
+          "title": "Overly Aggressive Cache-Control Header Delays Takedown of Deactivated Documents",
+          "severity": "LOW",
+          "primaryCategory": "DESIGN_DEFECT",
+          "location": {
+            "file": "backend/src/controllers/bookController.js",
+            "lineStart": 13,
+            "lineEnd": 13,
+            "symbol": "streamBook"
+          },
+          "evidence": "res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400') without an ETag or Last-Modified validation header.",
+          "impact": "Delayed revocation of documents from intermediate and browser caches.",
+          "reproduction": "Fetch GET /api/public/books/:id/read; inspect response Cache-Control header showing 1-hour max-age and 24-hour stale-while-revalidate without ETag.",
+          "remediation": "Provide ETag header derived from book.updatedAt or fileKey hash, and use must-revalidate or reduced max-age.",
+          "regressionTest": "Check GET /api/public/books/:id/read headers and verify ETag presence.",
+          "verification": "SUSPECTED",
+          "lifecycle": "NEW",
+          "triage": "OPEN",
+          "module": "books",
+          "scenario": ""
+        }
+      ],
+      "checks": [
+        {
+          "id": "node-syntax-books",
+          "name": "Node.js Syntax Validation",
+          "kind": "LINT",
+          "required": true,
+          "status": "PASS",
+          "scope": "backend/src/routes/books.js",
+          "command": "node --check backend/src/routes/books.js",
+          "exitCode": 0,
+          "note": "ES module syntax verified clean"
+        }
+      ],
+      "skillExecutions": [],
+      "coverage": {},
+      "auditRepoId": "MA-Creation",
+      "auditBranch": "main",
+      "auditCommit": "36f55fdcf2a44d01c6279a4a21b417b84d1166ba",
+      "auditRunId": "backend-swarm-baseline-20261114-final",
+      "computedVerdict": "CONDITIONAL",
+      "verdictNotes": [
+        "An open Critical/High candidate is not yet independently verified.",
+        "Open Medium/Low findings remain."
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "id": "node-syntax-books",
+      "name": "Node.js Syntax Validation",
+      "kind": "LINT",
+      "required": true,
+      "status": "PASS",
+      "scope": "backend/src/routes/books.js",
+      "command": "node --check backend/src/routes/books.js",
+      "exitCode": 0,
+      "note": "ES module syntax verified clean"
+    }
+  ],
+  "crossModuleFindings": []
+}

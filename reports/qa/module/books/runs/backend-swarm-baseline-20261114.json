@@ -1,0 +1,232 @@
+{
+  "schemaVersion": "1.0",
+  "run": {
+    "id": "backend-swarm-baseline-20261114",
+    "kind": "backend-swarm",
+    "title": "MA-Creation Backend Baseline Swarm Audit",
+    "startedAt": "2026-11-14T10:45:00Z",
+    "completedAt": "2026-11-14T11:15:00Z",
+    "repo": {
+      "id": "MA-Creation",
+      "root": ".",
+      "branch": "main",
+      "commit": "36f55fdcf2a44d01c6279a4a21b417b84d1166ba",
+      "dirty": true
+    },
+    "scope": {
+      "modules": [
+        "auth",
+        "videos",
+        "payments",
+        "courses",
+        "admin",
+        "catalog",
+        "books",
+        "leads"
+      ],
+      "filesInspected": [
+        "backend/src/routes/auth.js",
+        "backend/src/routes/videos.js",
+        "backend/src/routes/payments.js",
+        "backend/src/routes/courses.js",
+        "backend/src/routes/admin.js",
+        "backend/src/routes/adminLms.js",
+        "backend/src/routes/catalog.js",
+        "backend/src/routes/public.js",
+        "backend/src/routes/books.js",
+        "backend/src/routes/leads.js",
+        "backend/src/app.js",
+        "backend/src/server.js"
+      ],
+      "filesExcluded": [
+        "node_modules/**",
+        "frontend/dist/**"
+      ],
+      "sharedDependencies": [
+        "express",
+        "mongoose",
+        "ioredis",
+        "bullmq",
+        "minio",
+        "razorpay",
+        "argon2",
+        "jsonwebtoken",
+        "zod",
+        "helmet",
+        "cors"
+      ]
+    }
+  },
+  "modules": [
+    {
+      "name": "books",
+      "status": "FAIL",
+      "scope": {
+        "files": [
+          "backend/src/routes/books.js",
+          "backend/src/controllers/bookController.js",
+          "backend/src/services/book.service.js",
+          "backend/src/validators/book.validator.js",
+          "backend/src/models/LMS/Book.js"
+        ],
+        "sharedDependencies": [
+          "backend/src/middleware/auth.js",
+          "backend/src/middleware/upload.middleware.js",
+          "backend/src/middleware/validate.js",
+          "backend/src/middleware/error.js",
+          "backend/src/config/minio.js",
+          "backend/src/app.js",
+          "frontend/src/pages/admin/AdminBooks.jsx",
+          "frontend/src/pages/services/sections/ServiceHero.jsx"
+        ],
+        "excluded": []
+      },
+      "testMatrix": [
+        {
+          "endpoint": "GET /api/public/books",
+          "description": "Fetch latest active book for homepage/services hero without sensitive metadata leakage",
+          "status": "MISSING",
+          "reason": "No automated backend test suite exists"
+        },
+        {
+          "endpoint": "GET /api/public/books/:id/read",
+          "description": "Inline PDF streaming with Unicode/non-ASCII filename handling",
+          "status": "MISSING",
+          "reason": "No automated streaming test cases exist"
+        },
+        {
+          "endpoint": "GET /api/public/books/:id/download",
+          "description": "Attachment PDF download and download counter verification (GET vs HEAD)",
+          "status": "MISSING",
+          "reason": "No download test cases exist"
+        },
+        {
+          "endpoint": "GET /api/admin/books",
+          "description": "Admin authenticated listing with pagination and user population",
+          "status": "MISSING",
+          "reason": "No admin listing tests exist"
+        },
+        {
+          "endpoint": "POST /api/admin/books/upload",
+          "description": "Admin multipart PDF upload with metadata validation and S3 cleanup on error",
+          "status": "MISSING",
+          "reason": "No upload integration tests exist"
+        },
+        {
+          "endpoint": "PATCH /api/admin/books/:id",
+          "description": "Admin metadata update (title, description, coverImageUrl, active status)",
+          "status": "MISSING",
+          "reason": "No update validation tests exist"
+        },
+        {
+          "endpoint": "DELETE /api/admin/books/:id",
+          "description": "Admin book deletion with atomic S3/MinIO and database record removal",
+          "status": "MISSING",
+          "reason": "No deletion tests exist"
+        }
+      ],
+      "coverage": {
+        "line": 0,
+        "branch": 0,
+        "function": 0,
+        "statement": 0,
+        "source": "No automated tests configured for books module in backend"
+      },
+      "checks": [
+        {
+          "id": "syntax-check-books",
+          "name": "node --check",
+          "kind": "LINT",
+          "required": true,
+          "status": "PASS",
+          "scope": "backend/src/{routes/books.js,controllers/bookController.js,services/book.service.js,validators/book.validator.js,models/LMS/Book.js}",
+          "version": "Node v24.20.0",
+          "command": "node --check backend/src/routes/books.js backend/src/controllers/bookController.js backend/src/services/book.service.js backend/src/validators/book.validator.js backend/src/models/LMS/Book.js",
+          "exitCode": 0,
+          "note": "Syntax clean; no parsing or syntax errors."
+        },
+        {
+          "id": "security-audit-books",
+          "name": "security-and-code-quality-review",
+          "kind": "SCANNER",
+          "required": true,
+          "status": "FAIL",
+          "scope": "backend/src/routes/books.js, backend/src/controllers/bookController.js, backend/src/services/book.service.js, backend/src/validators/book.validator.js, backend/src/models/LMS/Book.js",
+          "command": "manual-static-and-architectural-analysis",
+          "exitCode": 1,
+          "note": "Discovered 2 High, 3 Medium, and 4 Low severity findings."
+        }
+      ],
+      "skillExecutions": [
+        {
+          "name": "security-audit",
+          "installedPath": "C:\\Users\\Asus\\.gemini\\config\\skills\\security-audit\\SKILL.md",
+          "invocationMode": "SKILL_FILE_LOADED",
+          "status": "EXECUTED",
+          "scope": "backend books module",
+          "findingsProduced": [
+            "BOOK-SEC-001",
+            "BOOK-SEC-002",
+            "BOOK-SEC-003",
+            "BOOK-SEC-004",
+            "BOOK-SEC-005",
+            "BOOK-SEC-006",
+            "BOOK-SEC-007",
+            "BOOK-SEC-008",
+            "BOOK-SEC-009"
+          ]
+        },
+        {
+          "name": "ponytail-sec",
+          "installedPath": "C:\\Users\\Asus\\.gemini\\config\\skills\\ponytail-sec\\SKILL.md",
+          "invocationMode": "SKILL_FILE_LOADED",
+          "status": "EXECUTED",
+          "scope": "backend books module",
+          "findingsProduced": [
+            "BOOK-SEC-001",
+            "BOOK-SEC-002",
+            "BOOK-SEC-003",
+            "BOOK-SEC-004",
+            "BOOK-SEC-005"
+          ]
+        }
+      ],
+      "slug": "books",
+      "findings": [],
+      "auditRepoId": "MA-Creation",
+      "auditBranch": "main",
+      "auditCommit": "36f55fdcf2a44d01c6279a4a21b417b84d1166ba",
+      "auditRunId": "backend-swarm-baseline-20261114",
+      "computedVerdict": "FAIL",
+      "verdictNotes": [
+        "At least one required check failed or returned a non-zero exit code."
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "id": "syntax-check-books",
+      "name": "node --check",
+      "kind": "LINT",
+      "required": true,
+      "status": "PASS",
+      "scope": "backend/src/{routes/books.js,controllers/bookController.js,services/book.service.js,validators/book.validator.js,models/LMS/Book.js}",
+      "version": "Node v24.20.0",
+      "command": "node --check backend/src/routes/books.js backend/src/controllers/bookController.js backend/src/services/book.service.js backend/src/validators/book.validator.js backend/src/models/LMS/Book.js",
+      "exitCode": 0,
+      "note": "Syntax clean; no parsing or syntax errors."
+    },
+    {
+      "id": "security-audit-books",
+      "name": "security-and-code-quality-review",
+      "kind": "SCANNER",
+      "required": true,
+      "status": "FAIL",
+      "scope": "backend/src/routes/books.js, backend/src/controllers/bookController.js, backend/src/services/book.service.js, backend/src/validators/book.validator.js, backend/src/models/LMS/Book.js",
+      "command": "manual-static-and-architectural-analysis",
+      "exitCode": 1,
+      "note": "Discovered 2 High, 3 Medium, and 4 Low severity findings."
+    }
+  ],
+  "crossModuleFindings": []
+}

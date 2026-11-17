@@ -35,11 +35,22 @@ export const env = {
     process.env.VIDEO_PLAYBACK_URL_TTL_SECONDS || 360,
   ),
 };
+
+
 export function assertProductionEnv() {
+  const coreRequired = {
+    MONGODB_URI: env.mongoUri,
+    JWT_SECRET: env.jwtSecret,
+    REDIS_HOST: process.env.REDIS_HOST,
+  };
+
+    for (const [key, value] of Object.entries(coreRequired)) {
+    if (!value) {
+      throw new Error(`[CONFIG ERROR] Core variable "${key}" is missing in .env!`);
+    }
+  }
   if (process.env.NODE_ENV === "production") {
-    for (const [key, value] of Object.entries({
-      MONGODB_URI: env.mongoUri,
-      JWT_SECRET: env.jwtSecret,
+    const prodRequired = {
       CLIENT_URL: env.clientUrl,
       RAZORPAY_KEY_ID: env.razorpayKeyId,
       RAZORPAY_KEY_SECRET: env.razorpayKeySecret,
@@ -47,8 +58,11 @@ export function assertProductionEnv() {
       MINIO_ACCESS_KEY: env.minioAccessKey,
       MINIO_SECRET_KEY: env.minioSecretKey,
       MINIO_BUCKET: env.minioBucket,
-    })) {
-      if (!value) throw new Error(`${key} is required in production`);
+    };
+    for (const [key, value] of Object.entries(prodRequired)) {
+      if (!value) {
+        throw new Error(`[PRODUCTION ERROR] "${key}" is strictly required in production!`);
+      }
     }
   }
 }
