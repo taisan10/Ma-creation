@@ -8,8 +8,6 @@ import Login from '../pages/Login'
 import Policies from '../pages/Policies'
 import Account from '../pages/Account'
 import Courses from '../pages/Courses'
-import CourseDetail from '../pages/CourseDetail'
-import WatchVideo from '../pages/WatchVideo'
 import Theme from '../pages/Theme'
 import NotFound from '../pages/NotFound'
 import AdminDashboard from '../pages/admin/AdminDashboard'
@@ -47,8 +45,6 @@ export default function AppRoutes() {
       <Route path="/policies" element={<Policies />} />
       <Route path="/account" element={<Account />} />
        <Route path="/courses" element={<Courses />} />
-      <Route path="/courses/:courseId" element={<CourseDetail />} />
-      <Route path="/courses/:courseId/watch/:videoId" element={<WatchVideo />} />
       <Route path="/theme" element={<Theme />} />
       <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
       <Route path="/admin/security" element={<AdminRoute><AdminSecurity /></AdminRoute>} />
