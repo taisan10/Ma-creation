@@ -106,8 +106,9 @@ services:
   #   build:
   #     context: ./frontend
   #     dockerfile: Dockerfile
+  #   networks:
+  #     - lms_internal
   #   restart: unless-stopped
-  #   networks: [internal]
 
   
 

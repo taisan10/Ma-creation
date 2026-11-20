@@ -31,17 +31,6 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(pinoHttp({ logger }));
 
-// if (process.env.NODE_ENV !== "production") {
-//   app.use((req, res, next) => {
-//     const start = Date.now();
-//     res.on("finish", () => {
-//       console.log(
-//         `[HTTP] ${req.method} ${req.originalUrl} ${res.statusCode} (${Date.now() - start}ms)`,
-//       );
-//     });
-//     next();
-//   });
-// }
 
 
 // peoduction se pahle ek baar read krna hai ye files ko iska update dena mu
