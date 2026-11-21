@@ -94,6 +94,7 @@ export async function api<T = unknown>(path: string, options: RequestInit = {}):
 
       clearSession();
       if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
         window.location.href = "/login";
       }
       break;

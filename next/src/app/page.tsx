@@ -10,9 +10,9 @@ export default function Home() {
           Next.js Enterprise Client Portal & Admin Console.
         </p>
         <div className="pt-4">
-          <Link href="/admin">
-            <Button size="lg">Go to Admin Dashboard</Button>
-          </Link>
+          <Button render={<Link href="/admin" />} size="lg">
+            Go to Admin Dashboard
+          </Button>
         </div>
       </div>
     </main>

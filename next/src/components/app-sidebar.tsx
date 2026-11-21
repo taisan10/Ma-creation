@@ -74,10 +74,14 @@ export function AppSidebar() {
                 const isActive = pathname === item.url;
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton render={<Link href={item.url} />} isActive={isActive} tooltip={item.title}>
-  <item.icon className="h-4 w-4" />
-  <span>{item.title}</span>
-</SidebarMenuButton>
+                    <SidebarMenuButton
+                      render={<Link href={item.url} />}
+                      isActive={isActive}
+                      tooltip={item.title}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
               })}
@@ -90,6 +94,7 @@ export function AppSidebar() {
       <SidebarFooter className="border-t p-3 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
         <div className="truncate">Enterprise Admin v1.0</div>
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }
