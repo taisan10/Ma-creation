@@ -33,7 +33,7 @@ export class AdminService {
    * Aggregate total counts for admin dashboard
    */
   static async getDashboardStats() {
-    const [users, leads, payments, services, plans, pages, faqs, partners, books] = await Promise.all([
+    const [users, leads, payments, services, plans, pages, faqs, partners, books, revenueTrend, userGrowth] = await Promise.all([
       User.countDocuments(),
       Lead.countDocuments(),
       Payment.countDocuments(),
@@ -43,8 +43,20 @@ export class AdminService {
       FAQ.countDocuments(),
       Partner.countDocuments(),
       Book.countDocuments(),
+
+      Payment.aggregate([
+        {$match: { status: "paid" }},
+        { $group: { _id: {$dateToString: {format: '%b', date: '$createdAt' }}, revenue: { $sum: '$amount' } }},
+        { $project: { _id: 0, month: '$_id', revenue: 1 } },
+
+      ]),
+
+      User.aggregate([
+        { $group: { _id: {$dateToString: {format: '%b', date: '$createdAt' }}, newUsers: { $sum: 1 }}},
+        { $project: { _id: 0, month: '$_id', newUsers: 1 }}
+      ])
     ])
-    return { users, leads, payments, services, plans, pages, faqs, partners, books }
+    return { users, leads, payments, services, plans, pages, faqs, partners, books, revenueTrend, userGrowth }
   }
 
   // Users Management

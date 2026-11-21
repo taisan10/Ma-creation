@@ -126,9 +126,9 @@ export async function api(path, options = {}) {
   throw new Error('Request failed')
 }
 
+export function getUser() { try { return JSON.parse(localStorage.getItem('mac_user') || 'null') } catch { return null } }
 export function setSession(data) { localStorage.setItem('mac_token', data.token); localStorage.setItem('mac_user', JSON.stringify(data.user)) }
 export function clearSession() { localStorage.removeItem('mac_token'); localStorage.removeItem('mac_user') }
-export function getUser() { try { return JSON.parse(localStorage.getItem('mac_user') || 'null') } catch { return null } }
 
 export async function logout() {
   await api('/auth/logout', { method: 'POST', headers: { 'x-refresh-token': '1' } }).catch(() => {})

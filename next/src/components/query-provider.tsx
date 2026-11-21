@@ -10,7 +10,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 60 * 1000, // 1 minute tak data fresh rahega (zero refetch)
+            staleTime: 1 * 60 * 1000, // 1 minute tak data fresh rahega (zero refetch
             refetchOnWindowFocus: true, // Doosre tab se wapas aane par auto-sync hoga
           },
         },
