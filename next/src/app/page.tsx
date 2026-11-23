@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 
 export default function Home() {
   return (
@@ -10,9 +10,9 @@ export default function Home() {
           Next.js Enterprise Client Portal & Admin Console.
         </p>
         <div className="pt-4">
-          <Button render={<Link href="/admin" />} size="lg">
+          <Link href="/admin" className={buttonVariants({ size: "lg" })}>
             Go to Admin Dashboard
-          </Button>
+          </Link>
         </div>
       </div>
     </main>

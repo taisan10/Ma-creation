@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import {
@@ -32,7 +31,7 @@ import {
   YAxis,
 } from "recharts";
 
-import { api } from "@/lib/api";
+import { useAdminDashboard } from "@/hooks/queries/use-admin-dashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -56,33 +55,6 @@ import {
 
 // Types
 type TimePreset = "30d" | "6m" | "1y" | "custom";
-
-interface RevenuePoint {
-  month: string;
-  revenue: number;
-}
-
-interface UserGrowthPoint {
-  month: string;
-  newUsers: number;
-}
-
-interface DashboardResponse {
-  success: boolean;
-  stats: {
-    users?: number;
-    leads?: number;
-    payments?: number;
-    services?: number;
-    plans?: number;
-    pages?: number;
-    faqs?: number;
-    books?: number;
-    revenueTrend?: RevenuePoint[];
-    userGrowth?: UserGrowthPoint[];
-    [key: string]: unknown;
-  };
-}
 
 // Chart configurations
 const paymentChartConfig = {
@@ -119,11 +91,17 @@ const presetsData = {
     ],
     "1y": [
       { month: "Jan", revenue: 12000 },
+      { month: "Feb", revenue: 15400 },
       { month: "Mar", revenue: 18900 },
+      { month: "Apr", revenue: 22800 },
       { month: "May", revenue: 27500 },
-      { month: "Jul", revenue: 24200 },
-      { month: "Sep", revenue: 31000 },
+      { month: "Jun", revenue: 32400 },
+      { month: "Jul", revenue: 28900 },
+      { month: "Aug", revenue: 38900 },
+      { month: "Sep", revenue: 34500 },
+      { month: "Oct", revenue: 47500 },
       { month: "Nov", revenue: 59000 },
+      { month: "Dec", revenue: 68400 },
     ],
   },
   users: {
@@ -143,11 +121,17 @@ const presetsData = {
     ],
     "1y": [
       { month: "Jan", newUsers: 18 },
+      { month: "Feb", newUsers: 23 },
       { month: "Mar", newUsers: 29 },
+      { month: "Apr", newUsers: 34 },
       { month: "May", newUsers: 40 },
-      { month: "Jul", newUsers: 36 },
-      { month: "Sep", newUsers: 48 },
+      { month: "Jun", newUsers: 46 },
+      { month: "Jul", newUsers: 42 },
+      { month: "Aug", newUsers: 55 },
+      { month: "Sep", newUsers: 50 },
+      { month: "Oct", newUsers: 68 },
       { month: "Nov", newUsers: 92 },
+      { month: "Dec", newUsers: 108 },
     ],
   },
 };
@@ -275,10 +259,7 @@ function TimeRangeFilter({
 }
 
 export default function AdminDashboardPage() {
-  const { data, isLoading, error, refetch, isFetching } = useQuery<DashboardResponse>({
-    queryKey: ["admin", "dashboard"],
-    queryFn: () => api<DashboardResponse>("/admin/dashboard"),
-  });
+  const { data, isLoading, error, refetch, isFetching } = useAdminDashboard();
 
   const stats = useMemo(() => data?.stats || {}, [data?.stats]);
 
