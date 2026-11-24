@@ -71,7 +71,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {adminNavItems.map((item) => {
-                const isActive = pathname === item.url;
+                const isActive = item.url === "/admin" ? pathname === "/admin" : pathname.startsWith(item.url);
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton

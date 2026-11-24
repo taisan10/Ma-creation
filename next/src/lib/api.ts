@@ -1,3 +1,6 @@
+import { useAuthStore } from "@/store/use-auth-store";
+
+
 // 1. Production Type-Safe Error Class
 export class ApiError extends Error {
   constructor(public status: number, public code?: string, message?: string) {
@@ -45,8 +48,9 @@ async function tryRefreshToken(): Promise<string | null> {
     }
 
     if (data?.token) {
-      localStorage.setItem("mac_token", data.token);
-      if (data.user) localStorage.setItem("mac_user", JSON.stringify(data.user));
+      if (data.user) {
+        useAuthStore.getState().setAuth(data.user, data.token);
+      }
       return data.token;
     }
     return null;
@@ -59,7 +63,10 @@ async function tryRefreshToken(): Promise<string | null> {
 
 // 4. Main Universal Fetcher (With Switch-Case Status Handling)
 export async function api<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = typeof window !== "undefined" ? localStorage.getItem("mac_token") : null;
+  let token = useAuthStore.getState().token;
+  if (!token && typeof window !== "undefined" && document.cookie.includes("mac_session=1")) {
+    token = await tryRefreshToken();
+  }
   const isForm = typeof FormData !== "undefined" && options.body instanceof FormData;
 
   const headers: Record<string, string> = {
@@ -90,6 +97,12 @@ export async function api<T = unknown>(path: string, options: RequestInit = {}):
         headers.Authorization = `Bearer ${newToken}`;
         const retryRes = await fetch(`${API_URL}${path}`, { ...options, headers, credentials: "include" });
         if (retryRes.ok) return (await safeJSON(retryRes)) as T;
+
+        // Sirf tabhi logout karein jab retry bhi 401 de. Server errors (500, 502) par user session persist rehna chahiye.
+        if (retryRes.status !== 401) {
+          const retryErr = await safeJSON(retryRes);
+          throw new ApiError(retryRes.status, retryErr?.code, retryErr?.message);
+        }
       }
 
       clearSession();
@@ -115,19 +128,18 @@ export async function api<T = unknown>(path: string, options: RequestInit = {}):
 // 5. Clean Session Helpers
 export const setSession = (token: string, user: User) => {
   if (typeof window === "undefined") return;
-  localStorage.setItem("mac_token", token);
-  localStorage.setItem("mac_user", JSON.stringify(user));
+  useAuthStore.getState().setAuth(user, token);
+  document.cookie = `mac_session=1; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
 };
 
 export const clearSession = () => {
   if (typeof window === "undefined") return;
-  localStorage.removeItem("mac_token");
-  localStorage.removeItem("mac_user");
+  useAuthStore.getState().clearAuth();
+  document.cookie = "mac_session=; path=/; max-age=0; SameSite=Lax";
 };
 
 export const getUser = (): User | null => {
-  if (typeof window === "undefined") return null;
-  return JSON.parse(localStorage.getItem("mac_user") || "null");
+  return useAuthStore.getState().user;
 };
 
 export const logout = async () => {

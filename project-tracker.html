@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MA Creation — Enterprise Migration Tracker</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+    .custom-checkbox:checked {
+      background-color: var(--success);
+      border-color: var(--success);
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-8 antialiased">
+  <div class="max-w-5xl mx-auto space-y-6">
+    
+    <!-- Top Header & Progress -->
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              Live Interactive Tracker
+            </span>
+            <span class="text-xs text-gray-400 font-mono">v1.2</span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1 text-white">
+            MA Creation — Migration & Roadmap
+          </h1>
+          <p class="text-sm text-gray-400 mt-1">
+            Track all completed, active, and upcoming milestones for the Next.js Enterprise Platform.
+          </p>
+        </div>
+
+        <!-- Global Stats Box -->
+        <div class="flex items-center gap-4 bg-gray-950/80 p-3.5 rounded-xl border border-gray-800/80">
+          <div class="text-center px-2">
+            <div id="stat-completed" class="text-2xl font-bold text-emerald-400">0</div>
+            <div class="text-[11px] text-gray-400 uppercase tracking-wider font-medium">Done</div>
+          </div>
+          <div class="h-8 w-[1px] bg-gray-800"></div>
+          <div class="text-center px-2">
+            <div id="stat-pending" class="text-2xl font-bold text-amber-400">0</div>
+            <div class="text-[11px] text-gray-400 uppercase tracking-wider font-medium">Pending</div>
+          </div>
+          <div class="h-8 w-[1px] bg-gray-800"></div>
+          <div class="text-center px-2">
+            <div id="stat-percent" class="text-2xl font-bold text-blue-400">0%</div>
+            <div class="text-[11px] text-gray-400 uppercase tracking-wider font-medium">Progress</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Progress Bar -->
+      <div class="mt-6 space-y-2">
+        <div class="flex justify-between text-xs text-gray-400">
+          <span>Overall Project Velocity</span>
+          <span id="progress-fraction" class="font-medium text-gray-300">0 / 0 Tasks</span>
+        </div>
+        <div class="w-full bg-gray-950 rounded-full h-3 p-0.5 border border-gray-800 overflow-hidden">
+          <div id="progress-bar" class="bg-gradient-to-r from-blue-500 via-emerald-500 to-teal-400 h-2 rounded-full transition-all duration-300 w-0"></div>
+        </div>
+      </div>
+
+      <!-- Controls & Filter Toolbar -->
+      <div class="flex flex-wrap items-center justify-between gap-3 mt-6 pt-5 border-t border-gray-800/80">
+        <div class="flex items-center gap-1.5 bg-gray-950 p-1 rounded-lg border border-gray-800 text-xs">
+          <button onclick="setFilter('all')" id="btn-all" class="filter-btn px-3 py-1.5 rounded-md font-medium bg-blue-600 text-white">All Tasks</button>
+          <button onclick="setFilter('completed')" id="btn-completed" class="filter-btn px-3 py-1.5 rounded-md font-medium text-gray-400 hover:text-white">Completed</button>
+          <button onclick="setFilter('pending')" id="btn-pending" class="filter-btn px-3 py-1.5 rounded-md font-medium text-gray-400 hover:text-white">Pending</button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="resetDefaults()" class="text-xs px-3 py-1.5 rounded-lg border border-gray-700 hover:bg-gray-800 text-gray-300 transition-colors">
+            ↺ Reset Defaults
+          </button>
+          <span id="save-status" class="text-xs text-emerald-400 flex items-center gap-1 font-mono">
+            ● Auto-Saved
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Task Groups Container -->
+    <div id="task-container" class="space-y-6">
+      
+      <!-- Section 1: Foundation Setup -->
+      <div class="task-group bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-sm space-y-3" data-phase="0">
+        <div class="flex items-center justify-between pb-2 border-b border-gray-800">
+          <div class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+            <h2 class="font-bold text-base text-white">Phase 0: Core Foundation & Next.js 16 Setup</h2>
+          </div>
+          <span class="phase-count text-xs px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md font-mono">Completed</span>
+        </div>
+        <div class="grid gap-2">
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p0-1">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Next.js 16 + React 19 + Tailwind v4 + Shadcn UI Initialization</div>
+              <div class="text-xs text-gray-400">Strict zero-custom CSS policy, Base UI primitives, modern toolchain.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p0-2">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Global Dark/Light/System Theme Provider</div>
+              <div class="text-xs text-gray-400">Tailwind v4 OKLCH CSS variable engine with persistent storage.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p0-3">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">TanStack Query v5 Provider Engine</div>
+              <div class="text-xs text-gray-400">Configured with stale-time freshness and auto-refetch on window focus.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p0-4">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Unified Enterprise API Client (lib/api.ts)</div>
+              <div class="text-xs text-gray-400">Auto Bearer JWT token header, safe JSON parser, 401 single-promise refresh engine.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p0-5">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Next.js Rewrite Proxy to Express Backend</div>
+              <div class="text-xs text-gray-400">next.config.ts proxying /api/:path* to http://localhost:5000/api/:path*.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p0-6">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Security & Dependency Audit Passed</div>
+              <div class="text-xs text-gray-400">Ponytail-Sec and Security-Audit passes clean with zero exploitable vulnerabilities.</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Section 2: Admin Overview & Senior Architecture -->
+      <div class="task-group bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-sm space-y-3" data-phase="1">
+        <div class="flex items-center justify-between pb-2 border-b border-gray-800">
+          <div class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+            <h2 class="font-bold text-base text-white">Phase 1: Admin Overview Dashboard & Architecture</h2>
+          </div>
+          <span class="phase-count text-xs px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md font-mono">Completed</span>
+        </div>
+        <div class="grid gap-2">
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p1-1">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Admin Responsive Shell & Navigation</div>
+              <div class="text-xs text-gray-400">AppSidebar with 11 module links, SidebarRail, Breadcrumbs, and Header controls.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p1-2">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">4 Primary Metric Cards with Growth Badges</div>
+              <div class="text-xs text-gray-400">Users (+12.4%), Payments (+8.1%), Leads (+5.3%), and Books (Active).</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p1-3">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">4 Secondary Content Counters</div>
+              <div class="text-xs text-gray-400">Services, Pricing Plans, CMS Pages, and FAQs aligned below primary row.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p1-4">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Revenue Trajectory Area Chart (12 Months + Pattern A Filters)</div>
+              <div class="text-xs text-gray-400">Full 12-month continuum (Jan-Dec), 30d/6m/1y presets, Popover Custom Calendar.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p1-5">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Student Growth Bar Chart (12 Months + Pattern A Filters)</div>
+              <div class="text-xs text-gray-400">New registration trends with independent time range filter.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p1-6">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Recent Transactions Table & Quick Actions</div>
+              <div class="text-xs text-gray-400">Razorpay payments preview with status badges and one-click quick action routes.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p1-7">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Next.js 16 Pre-render Unstable Date & Base UI Fixes</div>
+              <div class="text-xs text-gray-400">Zero prerender crashes, buttonVariants clean link semantics.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p1-8">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Centralized Query Key Factory (src/lib/query-keys.ts)</div>
+              <div class="text-xs text-gray-400">Pillar 1 implemented: Single source of truth for all TanStack keys.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p1-9">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Dedicated Dashboard Hook (useAdminDashboard.ts)</div>
+              <div class="text-xs text-gray-400">Pillar 2 implemented: keepPreviousData zero-flicker transitions, decoupled logic.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p1-10">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Dashboard Page Refactored to Pure Presentational UI</div>
+              <div class="text-xs text-gray-400">Zero raw API calls, zero inline query boilerplate, 100% clean architecture.</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Section 3: Authentication & Security Gate (Current Next Milestone) -->
+      <div class="task-group bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-sm space-y-3" data-phase="2">
+        <div class="flex items-center justify-between pb-2 border-b border-gray-800">
+          <div class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
+            <h2 class="font-bold text-base text-white">Phase 2: Authentication & Route Protection (Immediate Next)</h2>
+          </div>
+          <span class="phase-count text-xs px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-md font-mono">In Progress</span>
+        </div>
+        <div class="grid gap-2">
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p2-1">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Admin Login Page (src/app/login/page.tsx)</div>
+              <div class="text-xs text-gray-400">Shadcn Card, Form, Input, Password eye toggle, and Sonner error toaster.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p2-2">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Wire POST /api/auth/login & Session Persistence</div>
+              <div class="text-xs text-gray-400">Store mac_token and mac_user, auto-redirect to /admin on success.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p2-3">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Next.js Edge Middleware (src/middleware.ts)</div>
+              <div class="text-xs text-gray-400">Guard /admin/* routes before render, redirect unauthenticated requests to /login.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p2-4">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Admin Header Avatar & Logout Action</div>
+              <div class="text-xs text-gray-400">User info badge, Role indicator, and one-click token clearing & logout.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p2-5">
+            <input type="checkbox" checked class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Verify Live MongoDB Dashboard Stats</div>
+              <div class="text-xs text-gray-400">Confirm red error banner disappears and live database aggregates load seamlessly.</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Section 4: Remaining 11 Admin Modules -->
+      <div class="task-group bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-sm space-y-3" data-phase="3">
+        <div class="flex items-center justify-between pb-2 border-b border-gray-800">
+          <div class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-amber-500"></span>
+            <h2 class="font-bold text-base text-white">Phase 3: Remaining 11 Admin Modules (Control Room)</h2>
+          </div>
+          <span class="phase-count text-xs px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-md font-mono">Planned</span>
+        </div>
+        <div class="grid gap-2">
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p3-1">
+            <input type="checkbox" class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Module 2: Users Management (/admin/users)</div>
+              <div class="text-xs text-gray-400">TanStack Data Table, search, Admin/Customer role toggle with Optimistic UI updates.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p3-2">
+            <input type="checkbox" class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Module 3: Demo Leads Management (/admin/leads)</div>
+              <div class="text-xs text-gray-400">Inquiry ledger, status toggle (New/Contacted/Converted), note logger.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p3-3">
+            <input type="checkbox" class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Module 4: Razorpay Payments & Invoices (/admin/payments)</div>
+              <div class="text-xs text-gray-400">Payment ledger, status badges, date filtering, invoice receipt view.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p3-4">
+            <input type="checkbox" class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Module 5: Catalog Services & Pricing Plans (/admin/catalog)</div>
+              <div class="text-xs text-gray-400">Service package cards, plan tier pricing editor, feature bullets with instant updates.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p3-5">
+            <input type="checkbox" class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Module 6: CMS Pages Editor (/admin/pages)</div>
+              <div class="text-xs text-gray-400">Legal and static pages editor (About, Terms, Privacy Policy, GeM Guidelines).</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p3-6">
+            <input type="checkbox" class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Module 7: FAQs Management (/admin/faqs)</div>
+              <div class="text-xs text-gray-400">Category-wise accordion, drag order sorting, create/edit modals.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p3-7">
+            <input type="checkbox" class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Module 8: Enterprise Partners (/admin/partners)</div>
+              <div class="text-xs text-gray-400">Client logos, partner brand names, ordering and link settings.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p3-8">
+            <input type="checkbox" class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Module 9: GeM Books & Guides (/admin/books)</div>
+              <div class="text-xs text-gray-400">PDF handbooks, cover image uploader, price tags, customer downloads list.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p3-9">
+            <input type="checkbox" class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Module 10: Courses & Video LMS (/admin/courses)</div>
+              <div class="text-xs text-gray-400">Curriculum hierarchy, Lesson organizer, Chunked Video Upload Floating Dock.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p3-10">
+            <input type="checkbox" class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Module 11: Security & DRM Strikes Monitor (/admin/security)</div>
+              <div class="text-xs text-gray-400">Anti-screen recording strikes log, suspicious sessions, 1-Click Playback Unlock.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p3-11">
+            <input type="checkbox" class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Module 12: Site Settings & Theme (/admin/settings)</div>
+              <div class="text-xs text-gray-400">Platform brand name, support contacts, theme synchronizer, GeM credentials.</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Section 5: Public Portal & Student LMS Hub -->
+      <div class="task-group bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-sm space-y-3" data-phase="4">
+        <div class="flex items-center justify-between pb-2 border-b border-gray-800">
+          <div class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-purple-500"></span>
+            <h2 class="font-bold text-base text-white">Phase 4: Customer Public Portal & DRM Learning Hub</h2>
+          </div>
+          <span class="phase-count text-xs px-2 py-0.5 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-md font-mono">Future</span>
+        </div>
+        <div class="grid gap-2">
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p4-1">
+            <input type="checkbox" class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Public Landing Page (src/app/page.tsx)</div>
+              <div class="text-xs text-gray-400">Modern hero section, service pillars, customer reviews, GeM consultancy CTA.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p4-2">
+            <input type="checkbox" class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Public About Us (/about)</div>
+              <div class="text-xs text-gray-400">Founder section, company journey, mission and capabilities map.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p4-3">
+            <input type="checkbox" class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Public Services & Plans (/services, /plans)</div>
+              <div class="text-xs text-gray-400">Interactive pricing table, package chooser with Razorpay payment checkout.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p4-4">
+            <input type="checkbox" class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">DRM Protected Video Player (/courses/[id])</div>
+              <div class="text-xs text-gray-400">Dynamic floating watermark (User email + IP to prevent camera recording), strike detector.</div>
+            </div>
+          </label>
+          <label class="task-item flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer border border-transparent hover:border-gray-800 transition-colors" data-id="p4-5">
+            <input type="checkbox" class="custom-checkbox mt-0.5 h-4 w-4 rounded bg-gray-800 border-gray-700 text-emerald-500 focus:ring-0">
+            <div>
+              <div class="text-sm font-medium text-gray-200">Student Account Dashboard (/account)</div>
+              <div class="text-xs text-gray-400">Enrolled courses, active plans, invoice receipts, profile settings.</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'ma_creation_tracker_v1';
+    let currentFilter = 'all';
+
+    function initTracker() {
+      // Load saved state from localStorage
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          const state = JSON.parse(saved);
+          document.querySelectorAll('.task-item').forEach(item => {
+            const id = item.dataset.id;
+            const cb = item.querySelector('input[type="checkbox"]');
+            if (id in state) {
+              cb.checked = state[id];
+            }
+          });
+        } catch (e) {
+          console.error("Could not load tracker state", e);
+        }
+      }
+
+      // Add event listeners to all checkboxes
+      document.querySelectorAll('.task-item input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+          saveState();
+          recalculate();
+        });
+      });
+
+      recalculate();
+    }
+
+    function saveState() {
+      const state = {};
+      document.querySelectorAll('.task-item').forEach(item => {
+        const id = item.dataset.id;
+        const cb = item.querySelector('input[type="checkbox"]');
+        state[id] = cb.checked;
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      
+      const saveStatus = document.getElementById('save-status');
+      saveStatus.textContent = '● Saved!';
+      setTimeout(() => {
+        saveStatus.textContent = '● Auto-Saved';
+      }, 1200);
+    }
+
+    function recalculate() {
+      const allCheckboxes = document.querySelectorAll('.task-item input[type="checkbox"]');
+      const total = allCheckboxes.length;
+      let completed = 0;
+
+      allCheckboxes.forEach(cb => {
+        const label = cb.closest('.task-item');
+        if (cb.checked) {
+          completed++;
+          label.classList.add('opacity-75');
+          label.querySelector('.text-sm').classList.add('line-through', 'text-gray-400');
+        } else {
+          label.classList.remove('opacity-75');
+          label.querySelector('.text-sm').classList.remove('line-through', 'text-gray-400');
+        }
+      });
+
+      const pending = total - completed;
+      const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+      document.getElementById('stat-completed').textContent = completed;
+      document.getElementById('stat-pending').textContent = pending;
+      document.getElementById('stat-percent').textContent = percent + '%';
+      document.getElementById('progress-fraction').textContent = `${completed} / ${total} Tasks`;
+      document.getElementById('progress-bar').style.width = percent + '%';
+
+      applyFilter(currentFilter);
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white');
+        btn.classList.add('text-gray-400');
+      });
+      const activeBtn = document.getElementById('btn-' + filter);
+      activeBtn.classList.add('bg-blue-600', 'text-white');
+      activeBtn.classList.remove('text-gray-400');
+
+      applyFilter(filter);
+    }
+
+    function applyFilter(filter) {
+      document.querySelectorAll('.task-item').forEach(item => {
+        const cb = item.querySelector('input[type="checkbox"]');
+        if (filter === 'all') {
+          item.style.display = 'flex';
+        } else if (filter === 'completed') {
+          item.style.display = cb.checked ? 'flex' : 'none';
+        } else if (filter === 'pending') {
+          item.style.display = !cb.checked ? 'flex' : 'none';
+        }
+      });
+    }
+
+    function resetDefaults() {
+      if (confirm("Reset tracker to default baseline?")) {
+        localStorage.removeItem(STORAGE_KEY);
+        location.reload();
+      }
+    }
+
+    // Run on startup
+    initTracker();
+  </script>
+</body>
+</html>

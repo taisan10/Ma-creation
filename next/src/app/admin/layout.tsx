@@ -1,20 +1,13 @@
-import Link from "next/link";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AdminUserNav } from "@/components/admin-user-nav";
+import { AdminBreadcrumbs } from "@/components/admin-breadcrumbs";
 import {
   SidebarProvider,
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 
 export default function AdminLayout({
   children,
@@ -30,21 +23,12 @@ export default function AdminLayout({
           <div className="flex items-center gap-2">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden sm:block">
-                  <BreadcrumbLink render={<Link href="/admin" />}>Admin</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden sm:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Control Room</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
+            <AdminBreadcrumbs />
           </div>
-          {/* Top Right Controls (Theme Toggle) */}
+          {/* Top Right Controls (Theme Toggle & User Nav) */}
           <div className="flex items-center gap-2">
             <ThemeToggle />
+            <AdminUserNav />
           </div>
         </header>
 

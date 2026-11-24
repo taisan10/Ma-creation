@@ -55,7 +55,9 @@ export function useAdminDashboard(filters?: DashboardFilterParams) {
       if (filters?.from) searchParams.set("from", filters.from);
       if (filters?.to) searchParams.set("to", filters.to);
       const query = searchParams.toString();
-      return api<DashboardResponse>(`/admin/dashboard${query ? `?${query}` : ""}`);
+      return api<DashboardResponse>(
+        `/admin/dashboard${query ? `?${query}` : ""}`,
+      );
     },
     staleTime: 30 * 1000,
     placeholderData: keepPreviousData,

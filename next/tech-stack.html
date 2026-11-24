@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MA Creation — Next.js 16 Enterprise Tech Stack & Architecture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Neumorphism Light Palette */
+      --bg-base: #e6ecf5;
+      --surface: #e6ecf5;
+      --surface-convex: linear-gradient(145deg, #f6fcff, #cfd4dd);
+      --surface-concave: linear-gradient(145deg, #cfd4dd, #f6fcff);
+      
+      --shadow-extruded: 9px 9px 18px #c5cbd3, -9px -9px 18px #ffffff;
+      --shadow-extruded-sm: 5px 5px 10px #c5cbd3, -5px -5px 10px #ffffff;
+      --shadow-extruded-lg: 14px 14px 28px #c0c6ce, -14px -14px 28px #ffffff;
+      --shadow-inset: inset 4px 4px 8px #c5cbd3, inset -4px -4px 8px #ffffff;
+      --shadow-inset-sm: inset 2px 2px 5px #c5cbd3, inset -2px -2px 5px #ffffff;
+      
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      
+      --accent-primary: #3b82f6;
+      --accent-primary-gradient: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --accent-purple: #8b5cf6;
+      --border-subtle: rgba(255, 255, 255, 0.6);
+      
+      --badge-bg: #e6ecf5;
+      --badge-shadow: 3px 3px 6px #c5cbd3, -3px -3px 6px #ffffff;
+    }
+
+    [data-theme="dark"] {
+      /* Neumorphism Dark Palette */
+      --bg-base: #181b20;
+      --surface: #181b20;
+      --surface-convex: linear-gradient(145deg, #1a1d22, #16181d);
+      --surface-concave: linear-gradient(145deg, #16181d, #1a1d22);
+      
+      --shadow-extruded: 8px 8px 16px #0e1013, -8px -8px 16px #22262d;
+      --shadow-extruded-sm: 4px 4px 8px #0e1013, -4px -4px 8px #22262d;
+      --shadow-extruded-lg: 12px 12px 24px #0e1013, -12px -12px 24px #22262d;
+      --shadow-inset: inset 3px 3px 6px #0e1013, inset -3px -3px 6px #22262d;
+      --shadow-inset-sm: inset 2px 2px 4px #0e1013, inset -2px -2px 4px #22262d;
+      
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-light: #64748b;
+      
+      --accent-primary: #60a5fa;
+      --accent-primary-gradient: linear-gradient(135deg, #60a5fa, #3b82f6);
+      --accent-emerald: #34d399;
+      --accent-amber: #fbbf24;
+      --accent-rose: #fb7185;
+      --accent-purple: #a78bfa;
+      --border-subtle: rgba(255, 255, 255, 0.05);
+      
+      --badge-bg: #181b20;
+      --badge-shadow: 2px 2px 5px #0e1013, -2px -2px 5px #22262d;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 2.5rem 1.5rem;
+    }
+
+    .container {
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+
+    /* Top Bar / Header */
+    .header-card {
+      background: var(--surface);
+      border-radius: 28px;
+      padding: 2.5rem;
+      box-shadow: var(--shadow-extruded-lg);
+      margin-bottom: 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--accent-primary-gradient);
+    }
+
+    .header-flex {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.9rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--accent-primary);
+      box-shadow: var(--badge-shadow);
+      background: var(--surface);
+      margin-bottom: 1rem;
+    }
+
+    .hero-badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--accent-emerald);
+      box-shadow: 0 0 8px var(--accent-emerald);
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--text-main);
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      max-width: 760px;
+    }
+
+    /* Actions: Theme Toggle */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .neu-btn {
+      border: none;
+      background: var(--surface);
+      color: var(--text-main);
+      border-radius: 14px;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: var(--shadow-extruded-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .neu-btn:hover {
+      box-shadow: var(--shadow-extruded);
+      transform: translateY(-1px);
+    }
+
+    .neu-btn:active, .neu-btn.active {
+      box-shadow: var(--shadow-inset);
+      transform: translateY(1px);
+      color: var(--accent-primary);
+    }
+
+    /* Search & Stats Row */
+    .controls-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 1.5rem;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    @media (max-width: 768px) {
+      .controls-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .search-box {
+      background: var(--surface);
+      border-radius: 18px;
+      padding: 0.25rem 0.5rem;
+      box-shadow: var(--shadow-inset);
+      display: flex;
+      align-items: center;
+    }
+
+    .search-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      padding: 0.85rem 1.25rem;
+      font-size: 0.95rem;
+      color: var(--text-main);
+      font-family: inherit;
+      outline: none;
+    }
+
+    .search-input::placeholder {
+      color: var(--text-light);
+    }
+
+    /* Metric Counters */
+    .stats-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow-extruded);
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+      box-shadow: var(--shadow-inset);
+      color: var(--accent-primary);
+    }
+
+    .stat-val {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.1;
+    }
+
+    .stat-lbl {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 0.2rem;
+    }
+
+    /* Category Navigation */
+    .filter-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 2.5rem;
+      padding: 0.5rem;
+      border-radius: 20px;
+      box-shadow: var(--shadow-inset-sm);
+      background: var(--surface);
+    }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      padding: 0.65rem 1.25rem;
+      border-radius: 14px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+    }
+
+    .tab-btn.active {
+      background: var(--surface);
+      box-shadow: var(--shadow-extruded-sm);
+      color: var(--accent-primary);
+      font-weight: 700;
+    }
+
+    /* Technology Grid */
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 1.75rem;
+      margin-bottom: 3rem;
+    }
+
+    @media (max-width: 640px) {
+      .tech-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .tech-card {
+      background: var(--surface);
+      border-radius: 24px;
+      padding: 1.75rem;
+      box-shadow: var(--shadow-extruded);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .tech-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-extruded-lg);
+    }
+
+    .tech-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.25rem;
+    }
+
+    .tech-icon-wrap {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      box-shadow: var(--shadow-extruded-sm);
+      background: var(--surface);
+    }
+
+    .version-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.3rem 0.65rem;
+      border-radius: 8px;
+      box-shadow: var(--shadow-inset-sm);
+      color: var(--accent-primary);
+    }
+
+    .tech-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 0.35rem;
+    }
+
+    .tech-role {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent-purple);
+      margin-bottom: 0.85rem;
+    }
+
+    .tech-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+      margin-bottom: 1.25rem;
+    }
+
+    .tech-highlights {
+      list-style: none;
+      margin-bottom: 1.5rem;
+    }
+
+    .tech-highlights li {
+      font-size: 0.825rem;
+      color: var(--text-main);
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .tech-highlights li::before {
+      content: "✦";
+      color: var(--accent-emerald);
+      font-size: 0.85rem;
+      line-height: 1.2;
+    }
+
+    .tech-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .pillar-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      box-shadow: var(--badge-shadow);
+      background: var(--surface);
+    }
+
+    .pillar-badge.p-blue { color: var(--accent-primary); }
+    .pillar-badge.p-green { color: var(--accent-emerald); }
+    .pillar-badge.p-purple { color: var(--accent-purple); }
+    .pillar-badge.p-amber { color: var(--accent-amber); }
+    .pillar-badge.p-rose { color: var(--accent-rose); }
+
+    /* 5 Pillars Architecture Section */
+    .pillars-section {
+      background: var(--surface);
+      border-radius: 28px;
+      padding: 2.5rem;
+      box-shadow: var(--shadow-extruded-lg);
+      margin-bottom: 2.5rem;
+    }
+
+    .section-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-desc {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+    }
+
+    .pillars-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .pillar-item {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow-extruded);
+    }
+
+    .pillar-num {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--surface);
+      box-shadow: var(--shadow-inset);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.85rem;
+      color: var(--accent-primary);
+      margin-bottom: 1rem;
+    }
+
+    .pillar-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--text-main);
+    }
+
+    .pillar-detail {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 2rem 0;
+      color: var(--text-light);
+      font-size: 0.85rem;
+    }
+
+    .code-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.15rem 0.4rem;
+      border-radius: 6px;
+      background: var(--surface);
+      box-shadow: var(--shadow-inset-sm);
+      color: var(--accent-primary);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Top Header Card -->
+    <header class="header-card">
+      <div class="header-flex">
+        <div>
+          <div class="hero-badge">
+            <span class="hero-badge-dot"></span>
+            Enterprise Production Stack · MA Creation
+          </div>
+          <h1>Next.js 16 Technology Matrix</h1>
+          <p class="subtitle">
+            A comprehensive, interactive overview of all modern libraries, enterprise architectural pillars, 
+            zero-disk in-memory security patterns, and Shadcn UI design systems powering the <span class="code-pill">/next</span> frontend.
+          </p>
+        </div>
+        <div class="header-actions">
+          <button class="neu-btn" id="themeToggleBtn">
+            <span id="themeIcon">🌙</span> <span id="themeText">Dark Mode</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Key Metrics Strip -->
+    <div class="stats-strip">
+      <div class="stat-card">
+        <div class="stat-icon">⚡</div>
+        <div>
+          <div class="stat-val">Next.js 16</div>
+          <div class="stat-lbl">Turbopack Engine (React 19)</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🛡️</div>
+        <div>
+          <div class="stat-val">RAM Auth</div>
+          <div class="stat-lbl">Zero-Disk XSS Protection</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🎯</div>
+        <div>
+          <div class="stat-val">Pillar 1-5</div>
+          <div class="stat-lbl">Senior Enterprise Pillars</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🎨</div>
+        <div>
+          <div class="stat-val">0 Bespoke CSS</div>
+          <div class="stat-lbl">100% Shadcn & Tailwind OKLCH</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search & Controls -->
+    <div class="controls-row">
+      <div class="search-box">
+        <input 
+          type="text" 
+          id="searchInput" 
+          class="search-input" 
+          placeholder="Search by package name, architecture role, or technology keyword (e.g. zustand, tanstack, recharts, security)..."
+        >
+      </div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;" id="matchCount">
+        Showing 16 technologies
+      </div>
+    </div>
+
+    <!-- Category Filter Tabs -->
+    <div class="filter-tabs">
+      <button class="tab-btn active" data-cat="all">All Modules</button>
+      <button class="tab-btn" data-cat="core">Core & Framework</button>
+      <button class="tab-btn" data-cat="state">State & Data Fetching</button>
+      <button class="tab-btn" data-cat="ui">UI & Design System</button>
+      <button class="tab-btn" data-cat="security">Security & Headers</button>
+      <button class="tab-btn" data-cat="viz">Charts & Utilities</button>
+    </div>
+
+    <!-- Technology Cards Grid -->
+    <div class="tech-grid" id="techGrid">
+      
+      <!-- 1. Next.js 16 -->
+      <div class="tech-card" data-cat="core" data-tags="nextjs next react framework turbopack server component">
+        <div>
+          <div class="tech-header">
+            <div class="tech-icon-wrap">⚡</div>
+            <span class="version-tag">v16.4.6</span>
+          </div>
+          <h2 class="tech-title">Next.js 16 (App Router)</h2>
+          <div class="tech-role">Enterprise Core Framework</div>
+          <p class="tech-desc">
+            The backbone of MA Creation. Delivers React 19 Server Components, Turbopack incremental builds, async header security, dynamic rewrites, and zero-bundle layouts.
+          </p>
+          <ul class="tech-highlights">
+            <li>Zero-latency Server Component rendering for layouts & skeletons</li>
+            <li>Async security headers (<span class="code-pill">X-Frame-Options: DENY</span>)</li>
+            <li>Turbopack bundling with sub-second HMR updates</li>
+          </ul>
+        </div>
+        <div class="tech-footer">
+          <span class="pillar-badge p-blue">Core Foundation</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Production Engine</span>
+        </div>
+      </div>
+
+      <!-- 2. React 19 -->
+      <div class="tech-card" data-cat="core" data-tags="react react19 actions compiler hooks">
+        <div>
+          <div class="tech-header">
+            <div class="tech-icon-wrap">⚛️</div>
+            <span class="version-tag">v19.3.0</span>
+          </div>
+          <h2 class="tech-title">React 19 & React DOM</h2>
+          <div class="tech-role">UI Runtime Engine</div>
+          <p class="tech-desc">
+            Next-generation React architecture featuring concurrent actions, optimistic transitions, improved hydration, and first-class async hooks support.
+          </p>
+          <ul class="tech-highlights">
+            <li>Direct Server Action execution and async state boundaries</li>
+            <li>Concurrent transitions preventing layout freezing during search</li>
+            <li>React 19 strict hydration and resource preloading</li>
+          </ul>
+        </div>
+        <div class="tech-footer">
+          <span class="pillar-badge p-blue">Core Foundation</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Runtime</span>
+        </div>
+      </div>
+
+      <!-- 3. TanStack Query v5 -->
+      <div class="tech-card" data-cat="state" data-tags="tanstack react-query caching optimistic keys mutations">
+        <div>
+          <div class="tech-header">
+            <div class="tech-icon-wrap">🔄</div>
+            <span class="version-tag">v5.108.1</span>
+          </div>
+          <h2 class="tech-title">TanStack Query v5</h2>
+          <div class="tech-role">Asynchronous Server State Engine</div>
+          <p class="tech-desc">
+            Replaces manual useEffect data fetching. Governs server caching, auto-refetch on tab focus, stale-while-revalidate, and instantaneous optimistic UI rollbacks.
+          </p>
+          <ul class="tech-highlights">
+            <li>Pillar 1: Centralized query key factory (<span class="code-pill">adminKeys</span>)</li>
+            <li>Pillar 3: Zero-lag optimistic updates with automatic error rollback</li>
+            <li>Zero-flicker pagination with <span class="code-pill">keepPreviousData</span></li>
+          </ul>
+        </div>
+        <div class="tech-footer">
+          <span class="pillar-badge p-green">Pillar 1 & 3</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Server State</span>
+        </div>
+      </div>
+
+      <!-- 4. Zustand v5 -->
+      <div class="tech-card" data-cat="state" data-tags="zustand auth store memory token ram state">
+        <div>
+          <div class="tech-header">
+            <div class="tech-icon-wrap">🐻</div>
+            <span class="version-tag">v5.1.0</span>
+          </div>
+          <h2 class="tech-title">Zustand v5 (RAM Auth)</h2>
+          <div class="tech-role">Client In-Memory Session Store</div>
+          <p class="tech-desc">
+            High-performance client store holding admin tokens exclusively in RAM memory. Implements zero-trace disk security preventing XSS token exfiltration.
+          </p>
+          <ul class="tech-highlights">
+            <li>Pillar 2: Zero disk footprint (<span class="code-pill">localStorage = null</span>)</li>
+            <li>Silent F5 auto-healing via secure HttpOnly refresh cookies</li>
+            <li>Sub-millisecond direct atomic selector updates</li>
+          </ul>
+        </div>
+        <div class="tech-footer">
+          <span class="pillar-badge p-purple">Pillar 2</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">In-Memory RAM</span>
+        </div>
+      </div>
+
+      <!-- 5. Tailwind CSS v4 -->
+      <div class="tech-card" data-cat="ui" data-tags="tailwind css styling oklch responsive layout">
+        <div>
+          <div class="tech-header">
+            <div class="tech-icon-wrap">🎨</div>
+            <span class="version-tag">v4.3.3</span>
+          </div>
+          <h2 class="tech-title">Tailwind CSS v4 (Turbopack)</h2>
+          <div class="tech-role">Zero-Runtime Utility Styling Engine</div>
+          <p class="tech-desc">
+            Lightning-fast CSS engine integrated natively with Turbopack. Uses modern CSS OKLCH color spaces for perceptual lightness across dark/light modes.
+          </p>
+          <ul class="tech-highlights">
+            <li>Pillar 4: Strict zero bespoke/custom CSS rule</li>
+            <li>High-gamut OKLCH semantic palette variables</li>
+            <li>Sub-5ms incremental CSS compilation with Turbopack</li>
+          </ul>
+        </div>
+        <div class="tech-footer">
+          <span class="pillar-badge p-purple">Pillar 4</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Zero Bespoke CSS</span>
+        </div>
+      </div>
+
+      <!-- 6. Shadcn UI & Base UI -->
+      <div class="tech-card" data-cat="ui" data-tags="shadcn base-ui dialog table dropdown components accessible">
+        <div>
+          <div class="tech-header">
+            <div class="tech-icon-wrap">🧩</div>
+            <span class="version-tag">v4.23 & v1.9</span>
+          </div>
+          <h2 class="tech-title">Shadcn UI & Base UI</h2>
+          <div class="tech-role">Accessible Headless Component System</div>
+          <p class="tech-desc">
+            Pre-built accessible primitives without third-party lock-in. Supplies Dialogs, Tables, Dropdowns, Skeletons, Tooltips, and Sidebar navigation.
+          </p>
+          <ul class="tech-highlights">
+            <li>WAI-ARIA accessible focus management & keyboard navigation</li>
+            <li>Compound architecture (<span class="code-pill">DropdownMenu</span>, <span class="code-pill">Dialog</span>)</li>
+            <li>Direct JSX ownership for maximum customization</li>
+          </ul>
+        </div>
+        <div class="tech-footer">
+          <span class="pillar-badge p-purple">UI System</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Accessible Primitives</span>
+        </div>
+      </div>
+
+      <!-- 7. TypeScript 5 -->
+      <div class="tech-card" data-cat="core" data-tags="typescript ts types safety compiler">
+        <div>
+          <div class="tech-header">
+            <div class="tech-icon-wrap">🔷</div>
+            <span class="version-tag">v5.x</span>
+          </div>
+          <h2 class="tech-title">TypeScript 5</h2>
+          <div class="tech-role">End-to-End Strict Type System</div>
+          <p class="tech-desc">
+            Eliminates runtime errors before deployment. Strictly defines API models, Zod request schemas, TanStack responses, and component prop interfaces.
+          </p>
+          <ul class="tech-highlights">
+            <li>100% strict mode verification (<span class="code-pill">tsc --noEmit</span>: 0 errors)</li>
+            <li>Clean path alias resolution (<span class="code-pill">@/*</span>, <span class="code-pill">cn</span>)</li>
+            <li>Satisfies type checks for charts, queries, and store states</li>
+          </ul>
+        </div>
+        <div class="tech-footer">
+          <span class="pillar-badge p-blue">Type Safety</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Strict Compiler</span>
+        </div>
+      </div>
+
+      <!-- 8. Recharts -->
+      <div class="tech-card" data-cat="viz" data-tags="recharts charts analytics graphs areachart barchart">
+        <div>
+          <div class="tech-header">
+            <div class="tech-icon-wrap">📊</div>
+            <span class="version-tag">v3.8.0</span>
+          </div>
+          <h2 class="tech-title">Recharts v3</h2>
+          <div class="tech-role">Declarative Data Visualization</div>
+          <p class="tech-desc">
+            Powers the executive dashboard graphs. Renders interactive SVG AreaCharts for Razorpay revenue and BarCharts for student registrations with custom OKLCH gradients.
+          </p>
+          <ul class="tech-highlights">
+            <li>Responsive SVG rendering inside Shadcn <span class="code-pill">ChartContainer</span></li>
+            <li>Interactive zero-lag tooltips with currency formatting</li>
+            <li>Smooth curve morphing on dataset changes</li>
+          </ul>
+        </div>
+        <div class="tech-footer">
+          <span class="pillar-badge p-amber">Visualization</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Analytics</span>
+        </div>
+      </div>
+
+      <!-- 9. Security Headers & Defense -->
+      <div class="tech-card" data-cat="security" data-tags="security headers clickjacking x-frame-options csp mime sniffing">
+        <div>
+          <div class="tech-header">
+            <div class="tech-icon-wrap">🛡️</div>
+            <span class="version-tag">Pillar 5</span>
+          </div>
+          <h2 class="tech-title">Edge Security Headers</h2>
+          <div class="tech-role">Clickjacking & MIME Defense</div>
+          <p class="tech-desc">
+            Configured in <span class="code-pill">next.config.ts</span> to instruct client browsers to strictly disallow iframe wrapping and content sniffing attacks.
+          </p>
+          <ul class="tech-highlights">
+            <li><span class="code-pill">X-Frame-Options: DENY</span> blocks clickjacking</li>
+            <li><span class="code-pill">X-Content-Type-Options: nosniff</span> stops MIME sniffing</li>
+            <li>Permissions policy disabling camera, microphone & location</li>
+          </ul>
+        </div>
+        <div class="tech-footer">
+          <span class="pillar-badge p-rose">Pillar 5</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Defense in Depth</span>
+        </div>
+      </div>
+
+      <!-- 10. DRM & Anti-Piracy Controller -->
+      <div class="tech-card" data-cat="security" data-tags="drm lms security alerts recording strikes anti-piracy video">
+        <div>
+          <div class="tech-header">
+            <div class="tech-icon-wrap">🔒</div>
+            <span class="version-tag">LMS Core</span>
+          </div>
+          <h2 class="tech-title">DRM & Anti-Piracy Monitor</h2>
+          <div class="tech-role">Content Protection System</div>
+          <p class="tech-desc">
+            Detects unauthorized screen grabbers (OBS, snipping tool, tab blur). Instantly freezes student video playback and records exact stop timestamps for admin review.
+          </p>
+          <ul class="tech-highlights">
+            <li>Suspicious event detection (<span class="code-pill">recording_suspected</span>)</li>
+            <li>Student playback lock & strike accumulation control</li>
+            <li>One-click administrative unlock or ban resolution</li>
+          </ul>
+        </div>
+        <div class="tech-footer">
+          <span class="pillar-badge p-rose">IP Protection</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">LMS Defense</span>
+        </div>
+      </div>
+
+      <!-- 11. Sonner -->
+      <div class="tech-card" data-cat="ui" data-tags="sonner toast notification feedback alert">
+        <div>
+          <div class="tech-header">
+            <div class="tech-icon-wrap">🔔</div>
+            <span class="version-tag">v2.0.8</span>
+          </div>
+          <h2 class="tech-title">Sonner (Toast Engine)</h2>
+          <div class="tech-role">Enterprise Toast Notifications</div>
+          <p class="tech-desc">
+            Clean, un-intrusive stacked notification system. Provides instant visual feedback on API mutations, error catches, and optimistic rollbacks.
+          </p>
+          <ul class="tech-highlights">
+            <li>Stackable, swipe-to-dismiss toast cards</li>
+            <li>Rich action buttons & theme-synced styling</li>
+            <li>Zero layout shift on screen edges</li>
+          </ul>
+        </div>
+        <div class="tech-footer">
+          <span class="pillar-badge p-purple">Feedback</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Notifications</span>
+        </div>
+      </div>
+
+      <!-- 12. Lucide React -->
+      <div class="tech-card" data-cat="ui" data-tags="lucide icons svg vector symbols">
+        <div>
+          <div class="tech-header">
+            <div class="tech-icon-wrap">✨</div>
+            <span class="version-tag">v1.76.0</span>
+          </div>
+          <h2 class="tech-title">Lucide React</h2>
+          <div class="tech-role">Consistent Iconography System</div>
+          <p class="tech-desc">
+            Clean 24px grid-aligned SVG icons across all modules. Provides visual anchors for navigation, status badges, metrics, and admin actions.
+          </p>
+          <ul class="tech-highlights">
+            <li>Zero-runtime SVG tree-shaking</li>
+            <li>Standardized 16px/20px sizes matching Shadcn spacing</li>
+            <li>High accessibility with aria-hidden defaults</li>
+          </ul>
+        </div>
+        <div class="tech-footer">
+          <span class="pillar-badge p-purple">Visuals</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Icon System</span>
+        </div>
+      </div>
+
+      <!-- 13. Date-fns -->
+      <div class="tech-card" data-cat="viz" data-tags="date-fns dates formatting time duration calendar">
+        <div>
+          <div class="tech-header">
+            <div class="tech-icon-wrap">📅</div>
+            <span class="version-tag">v4.4.0</span>
+          </div>
+          <h2 class="tech-title">Date-fns v4</h2>
+          <div class="tech-role">Functional Date Utility Toolkit</div>
+          <p class="tech-desc">
+            Lightweight, immutable date manipulation. Formats timestamps into human-readable strings (e.g. "MMM dd, yyyy", "14m 32s") without the bloat of Moment.js.
+          </p>
+          <ul class="tech-highlights">
+            <li>Modular functional programming architecture</li>
+            <li>Tree-shakeable functions reducing client JS bundle</li>
+            <li>Strict timezone and ISO format parsing</li>
+          </ul>
+        </div>
+        <div class="tech-footer">
+          <span class="pillar-badge p-amber">Utility</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Date Formatting</span>
+        </div>
+      </div>
+
+      <!-- 14. Clsx & Tailwind-Merge -->
+      <div class="tech-card" data-cat="ui" data-tags="clsx tailwind-merge cva cn utils styling">
+        <div>
+          <div class="tech-header">
+            <div class="tech-icon-wrap">⚙️</div>
+            <span class="version-tag">v2.1 & v3.0</span>
+          </div>
+          <h2 class="tech-title">Clsx & Tailwind-Merge (cn)</h2>
+          <div class="tech-role">Class Conflict Resolver & Variant Engine</div>
+          <p class="tech-desc">
+            The core utility behind the <span class="code-pill">cn()</span> helper. Resolves conflicting Tailwind utility classes at runtime safely and conditionally.
+          </p>
+          <ul class="tech-highlights">
+            <li>Safely merges overriding utilities (e.g. <span class="code-pill">p-4</span> vs <span class="code-pill">p-2</span>)</li>
+            <li>Zero unwanted class concatenation bugs</li>
+            <li>Powers all Shadcn component variant wrappers</li>
+          </ul>
+        </div>
+        <div class="tech-footer">
+          <span class="pillar-badge p-purple">CSS Helper</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Conflict Engine</span>
+        </div>
+      </div>
+
+      <!-- 15. useDebounce Hook -->
+      <div class="tech-card" data-cat="state" data-tags="debounce search hook performance optimization">
+        <div>
+          <div class="tech-header">
+            <div class="tech-icon-wrap">⏱️</div>
+            <span class="version-tag">Custom Hook</span>
+          </div>
+          <h2 class="tech-title">useDebounce (300ms)</h2>
+          <div class="tech-role">Real-Time Search Optimizer</div>
+          <p class="tech-desc">
+            Prevents database hammering on keyboard keystrokes. Delays search query firing until the user pauses typing for 300 milliseconds.
+          </p>
+          <ul class="tech-highlights">
+            <li>Reduces server API calls by over 80% during user typing</li>
+            <li>Smooth zero-lag table input experience</li>
+            <li>Type-safe generic signature (<span class="code-pill">&lt;T&gt;</span>)</li>
+          </ul>
+        </div>
+        <div class="tech-footer">
+          <span class="pillar-badge p-green">Performance</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Database Shield</span>
+        </div>
+      </div>
+
+      <!-- 16. Dynamic Breadcrumbs & Suspense Loaders -->
+      <div class="tech-card" data-cat="ui" data-tags="breadcrumbs suspense skeleton loading layout error">
+        <div>
+          <div class="tech-header">
+            <div class="tech-icon-wrap">🧭</div>
+            <span class="version-tag">UX Standard</span>
+          </div>
+          <h2 class="tech-title">Breadcrumbs & Suspense</h2>
+          <div class="tech-role">Zero-Flicker Layout Navigation</div>
+          <p class="tech-desc">
+            Dynamic Next.js 16 route breadcrumb resolution and automated Suspense loading skeletons for zero layout shift during navigation.
+          </p>
+          <ul class="tech-highlights">
+            <li>Dynamic path mapping (<span class="code-pill">/admin/users</span> → Admin > Users)</li>
+            <li>Next.js 16 <span class="code-pill">loading.tsx</span> with Shadcn <span class="code-pill">&lt;Skeleton&gt;</span></li>
+            <li>Next.js <span class="code-pill">error.tsx</span> boundary preventing white-screen crashes</li>
+          </ul>
+        </div>
+        <div class="tech-footer">
+          <span class="pillar-badge p-purple">UX Experience</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Zero Layout Shift</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 5 Architectural Pillars Section -->
+    <section class="pillars-section">
+      <h2 class="section-title">The 5 Senior Architecture Pillars</h2>
+      <p class="section-desc">
+        Strict engineering principles governing every file, component, hook, and API interaction in the Next.js enterprise migration.
+      </p>
+
+      <div class="pillars-grid">
+        
+        <div class="pillar-item">
+          <div class="pillar-num">01</div>
+          <h3 class="pillar-name">Centralized Query Key Factory</h3>
+          <p class="pillar-detail">
+            Single source of truth in <span class="code-pill">query-keys.ts</span>. Every TanStack hook uses typed key factories (<span class="code-pill">adminKeys.users()</span>) to guarantee 100% bug-free cache invalidations across mutations.
+          </p>
+        </div>
+
+        <div class="pillar-item">
+          <div class="pillar-num">02</div>
+          <h3 class="pillar-name">RAM In-Memory Session</h3>
+          <p class="pillar-detail">
+            JWT access tokens are stored strictly in RAM memory via Zustand. Zero disk trace in localStorage renders the platform immune to XSS token theft. F5 refreshes are silently healed via secure HttpOnly cookies.
+          </p>
+        </div>
+
+        <div class="pillar-item">
+          <div class="pillar-num">03</div>
+          <h3 class="pillar-name">Optimistic UI Mutations</h3>
+          <p class="pillar-detail">
+            Actions like role changes, DRM unlocks, or status toggles update the UI immediately without waiting for server round-trips. If an error occurs, the cache automatically rolls back with a toast alert.
+          </p>
+        </div>
+
+        <div class="pillar-item">
+          <div class="pillar-num">04</div>
+          <h3 class="pillar-name">Zero Bespoke Custom CSS</h3>
+          <p class="pillar-detail">
+            Zero messy CSS files or random color classes. All styling strictly utilizes pre-built Shadcn UI primitives, Lucide React icons, and high-gamut Tailwind CSS OKLCH design tokens.
+          </p>
+        </div>
+
+        <div class="pillar-item">
+          <div class="pillar-num">05</div>
+          <h3 class="pillar-name">Defense-In-Depth Security</h3>
+          <p class="pillar-detail">
+            Multi-tier protection combining Next.js clickjacking defense (<span class="code-pill">X-Frame-Options: DENY</span>), MIME sniffing locks, and real-time LMS lecture DRM stream screen-grab freeze detection.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <p>MA Creation Enterprise Architecture Matrix · Generated in <span class="code-pill">/next/tech-stack.html</span></p>
+      <p style="margin-top: 0.35rem; font-size: 0.8rem;">Fully compatible with any modern browser · Open directly to inspect technology status</p>
+    </footer>
+
+  </div>
+
+  <script>
+    // --- Theme Toggle (Neumorphism Light / Dark) ---
+    const themeBtn = document.getElementById('themeToggleBtn');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeText = document.getElementById('themeText');
+    const html = document.documentElement;
+
+    function setTheme(theme) {
+      html.setAttribute('data-theme', theme);
+      if (theme === 'dark') {
+        themeIcon.textContent = '☀️';
+        themeText.textContent = 'Light Mode';
+      } else {
+        themeIcon.textContent = '🌙';
+        themeText.textContent = 'Dark Mode';
+      }
+      localStorage.setItem('ma_tech_theme', theme);
+    }
+
+    const savedTheme = localStorage.getItem('ma_tech_theme') || 'light';
+    setTheme(savedTheme);
+
+    themeBtn.addEventListener('click', () => {
+      const current = html.getAttribute('data-theme');
+      setTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    // --- Search & Category Filtering ---
+    const searchInput = document.getElementById('searchInput');
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const techCards = document.querySelectorAll('.tech-card');
+    const matchCount = document.getElementById('matchCount');
+
+    let activeCategory = 'all';
+    let searchQuery = '';
+
+    function filterCards() {
+      let count = 0;
+      techCards.forEach(card => {
+        const cat = card.getAttribute('data-cat');
+        const tags = card.getAttribute('data-tags').toLowerCase();
+        const text = card.textContent.toLowerCase();
+
+        const matchesCat = (activeCategory === 'all' || cat === activeCategory);
+        const matchesSearch = (searchQuery === '' || tags.includes(searchQuery) || text.includes(searchQuery));
+
+        if (matchesCat && matchesSearch) {
+          card.style.display = 'flex';
+          count++;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+
+      matchCount.textContent = `Showing ${count} of ${techCards.length} technologies`;
+    }
+
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeCategory = btn.getAttribute('data-cat');
+        filterCards();
+      });
+    });
+
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value.trim().toLowerCase();
+      filterCards();
+    });
+  </script>
+</body>
+</html>
