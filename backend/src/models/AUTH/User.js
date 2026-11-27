@@ -3,7 +3,16 @@ import mongoose from 'mongoose'
 const schema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, minLength: 2, maxLength: 80 },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
+  
+  // ⚠️ ARCHITECTURAL NOTICE (OAuth & Follow-ups):
+  // Phone is currently required for email/password signup and WhatsApp/call updates.
+  // REMINDER FOR FUTURE OAUTH INTEGRATION (Google/GitHub Login):
+  // OAuth providers DO NOT supply a phone number in standard ID tokens.
+  // When adding OAuth:
+  // 1. Either change `required: false` here, OR make phone required conditionally (only for local auth).
+  // 2. Implement a post-OAuth "Progressive Profiling / Onboarding" screen to collect phone number before checkout.
   phone: { type: String, required: true, trim: true },
+  
   company: { type: String, trim: true, maxLength: 120 },
   passwordHash: { type: String, required: true },
   interest: { type: String, trim: true },

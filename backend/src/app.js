@@ -2,7 +2,6 @@ import * as Sentry from "@sentry/node";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
 import { env, assertProductionEnv } from "./config/env.js";
 import authRoutes from "./routes/auth.js";
 import leadRoutes from "./routes/leads.js";
@@ -16,6 +15,7 @@ import courseRoutes from "./routes/courses.js";
 import videoRoutes from "./routes/videos.js";
 import swaggerRouter from "./routes/swagger.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
+import { globalLimiter } from "./middleware/rateLimiter.js";
 import { webhook } from "./controllers/paymentController.js";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
@@ -52,27 +52,7 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    // production se pahle test mode remove kr dunga 
-    // max: process.env.NODE_ENV === 'production' ? 600 : 100000,
-    max:
-      process.env.LOAD_TEST_MODE === "true"
-        ? 200000
-        : process.env.NODE_ENV === "production"
-          ? 1200
-          : 100000, // production production mai upload se pahle muje ye sb add btaye ki remove krna h ok only information remove nahi krna ok
-    standardHeaders: "draft-8",
-    legacyHeaders: false,
-    // skip: req => process.env.NODE_ENV !== 'production' || req.path === '/api/public/events',
-    skip: (req) =>
-      process.env.NODE_ENV !== "production" ||
-      process.env.LOAD_TEST_MODE === "true" ||
-      req.path === "/api/public/events" ||
-      req.path.startsWith("/api-docs"), // production production mai upload se pahle muje ye sb add btaye ki remove krna h ok only information remove nahi krna ok
-  }),
-);
+app.use(globalLimiter);
 
 app.use(cookieParser());
 

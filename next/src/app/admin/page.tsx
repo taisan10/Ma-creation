@@ -20,6 +20,7 @@ import {
   Calendar as CalendarIcon,
   ShieldCheck,
   ArrowRight,
+  AlertTriangle,
 } from "lucide-react";
 import {
   Area,
@@ -352,12 +353,30 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Error Banner */}
+      {/* Error Banner with Interactive Retry */}
       {error && (
-        <Card className="border-destructive/30 bg-destructive/5 text-destructive p-4">
-          <p className="text-sm font-medium">
-            Could not fetch dashboard stats. Please ensure backend is running.
-          </p>
+        <Card className="border-destructive/30 bg-destructive/5 text-destructive p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="h-5 w-5 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold">
+                Could not fetch dashboard metrics
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {error instanceof Error ? error.message : "Please ensure the backend service is running."}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="h-8 text-xs gap-1.5 border-destructive/30 hover:bg-destructive/10 shrink-0 self-start sm:self-auto"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+            Retry Connection
+          </Button>
         </Card>
       )}
 

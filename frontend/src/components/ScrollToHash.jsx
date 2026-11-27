@@ -15,7 +15,8 @@ export default function ScrollToHash() {
     if (hash) {
       const el = document.getElementById(hash.replace('#', ''))
       if (el) {
-        const scroll = () => el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        const reducedMotion = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+        const scroll = () => el.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' })
         if (typeof requestAnimationFrame !== 'undefined') {
           requestAnimationFrame(() => requestAnimationFrame(scroll))
         } else {

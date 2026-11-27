@@ -10,7 +10,7 @@ export async function requireCourseEntitlement(req, res, next) {
     if (!course) return next(new AppError('Course not found', 404, 'NOT_FOUND'))
 
     const isAdmin = req.user?.role === 'admin'
-    const owns = isAdmin || await Payment.exists({ user: req.user.sub, plan: course.plan, status: 'paid' })
+    const owns = isAdmin || await Payment.exists({ user: req.user.sub, plan: course.plan, status: { $in: ['paid', 'refund_failed'] } })
     if (!owns) {
       return next(new AppError('You have not purchased the plan that unlocks this course', 403, 'NOT_ENTITLED'))
     }

@@ -53,7 +53,8 @@ export default function AdminLeads() {
             <thead>
               <tr>
                 <th className="th-cell">Contact</th>
-                <th className="th-cell">Company</th>
+                <th className="th-cell">Business &amp; Location</th>
+                <th className="th-cell">GeM Profile</th>
                 <th className="th-cell">Type</th>
                 <th className="th-cell">Message</th>
                 <th className="th-cell">Status</th>
@@ -61,13 +62,24 @@ export default function AdminLeads() {
               </tr>
             </thead>
             <tbody>
-              {items.map(x => (
+              {items.map(x => {
+                const displayName = x.name || x.business || x.company || 'Visitor'
+                const businessName = x.business || x.company
+                const profileParts = [x.category, x.need?.replace(/_/g, ' '), x.experience].filter(Boolean)
+                return (
                 <tr key={x._id}>
                   <td className="td-cell">
-                    <b>{x.name}</b>
-                    <div className="text-xs text-ink/50">{x.email}<br />{x.phone}</div>
+                    <b>{displayName}</b>
+                    <div className="text-xs text-ink/60">
+                      {x.phone}
+                      {x.email ? <><br />{x.email}</> : null}
+                    </div>
                   </td>
-                  <td className="td-cell">{x.company || '—'}</td>
+                  <td className="td-cell">
+                    <div>{businessName || 'Individual'}</div>
+                    {x.location && <div className="text-xs text-ink/60">{x.location}</div>}
+                  </td>
+                  <td className="td-cell text-xs text-ink/75">{profileParts.length ? profileParts.join(' · ') : '—'}</td>
                   <td className="td-cell">{x.type}</td>
                   <td className="td-cell max-w-[300px]">{x.message || '—'}</td>
                   <td className="td-cell">
@@ -81,7 +93,8 @@ export default function AdminLeads() {
                     <button className="btn-outline btn-sm text-rust" onClick={() => del(x._id)}>Delete</button>
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>

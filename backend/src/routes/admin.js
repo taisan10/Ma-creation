@@ -9,14 +9,14 @@ import {
   resolveIncidentSchema,
 } from '../validators/admin.validator.js'
 import * as c from '../controllers/adminController.js'
+import * as refundController from '../controllers/refundController.js'
 
 const router = Router()
 router.use(authenticate, requireAdmin)
 
 router.get('/dashboard', asyncHandler(c.dashboard))
 router.get('/users', asyncHandler(c.listUsers))
-router.patch('/users/:id', validate(updateUserSchema), asyncHandler(c.updateUser))
-router.delete('/users/:id', asyncHandler(c.deleteUser))
+
 
 router.get('/leads', asyncHandler(c.listLeads))
 router.patch('/leads/:id', validate(updateLeadStatusSchema), asyncHandler(c.updateLead))
@@ -37,5 +37,10 @@ router.get('/security-incidents', asyncHandler(c.listSecurityIncidents))
 router.post('/security-incidents/:id/resolve', validate(resolveIncidentSchema), asyncHandler(c.resolveSecurityIncident))
 router.post('/security-incidents/:id/revoke-plan', validate(resolveIncidentSchema), asyncHandler(c.revokePlanFromIncident))
 router.post('/security-incidents/:id/ban-user', validate(resolveIncidentSchema), asyncHandler(c.banUserFromIncident))
+
+// Refund Tickets Management
+router.get('/refunds', asyncHandler(refundController.listTickets))
+router.post('/refunds/:id/approve', validate(resolveIncidentSchema), asyncHandler(refundController.approveRefund))
+router.post('/refunds/:id/reject', validate(resolveIncidentSchema), asyncHandler(refundController.rejectRefund))
 
 export default router

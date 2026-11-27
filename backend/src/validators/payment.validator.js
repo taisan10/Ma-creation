@@ -18,3 +18,8 @@ export const markFailedSchema = z.object({
   razorpay_order_id: z.string().min(1, 'Razorpay order ID is required'),
 })
 
+export const createRefundTicketSchema = z.object({
+  paymentId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid payment ID'),
+  reason: z.string().trim().min(5, 'Reason must be at least 5 characters').max(500, 'Reason cannot exceed 500 characters'),
+})
+

@@ -30,7 +30,8 @@ export async function webhook(req, res) {
   const signature = req.headers['x-razorpay-signature']
   const event = req.body?.event
   const entity = req.body?.payload?.payment?.entity
+  const payload = req.body?.payload
 
-  await PaymentService.handleWebhook(req.rawBody, signature, event, entity)
+  await PaymentService.handleWebhook(req.rawBody, signature, event, entity, payload)
   res.json({ success: true })
 }

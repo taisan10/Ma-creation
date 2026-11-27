@@ -15,6 +15,7 @@ import {
   BookOpen,
   GraduationCap,
   Sparkles,
+  Palette,
 } from "lucide-react";
 
 import {
@@ -85,6 +86,23 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 );
               })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Design System</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={<Link href="/admin/theme" />}
+                  isActive={pathname === "/admin/theme"}
+                  tooltip="Theme Spec & Tokens"
+                >
+                  <Palette className="h-4 w-4" />
+                  <span>Theme Spec</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

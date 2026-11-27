@@ -64,43 +64,7 @@ export class AdminService {
     return await User.find().select('-passwordHash').sort({ createdAt: -1 }).limit(limit)
   }
 
-  static async updateUser(callerAdminId, targetUserId, data) {
-    if (String(callerAdminId) === String(targetUserId) && data.role === 'customer') {
-      throw new AppError('You cannot remove your own admin access', 400, 'SELF_ROLE_CHANGE')
-    }
-    if (data.role === 'customer') {
-      const adminCount = await User.countDocuments({ role: 'admin' })
-      if (adminCount <= 1) throw new AppError('Cannot demote the last admin', 400, 'LAST_ADMIN')
-    }
-    const { name, email, phone, company, role, interest } = data
-    const user = await User.findByIdAndUpdate(
-      targetUserId,
-      { $set: { name, email, phone, company, role, interest } },
-      { new: true, runValidators: true }
-    ).select('-passwordHash')
-    if (!user) throw new AppError('User not found', 404, 'NOT_FOUND')
-    return user
-  }
-  static async deleteUser(callerAdminId, targetUserId) {
-    if (String(callerAdminId) === String(targetUserId)) {
-      throw new AppError('You cannot delete your own account', 400, 'SELF_DELETE')
-    }
 
-    // 1. Target user ko fetch karein
-    const targetUser = await User.findById(targetUserId)
-    if (!targetUser) throw new AppError('User not found', 404, 'NOT_FOUND')
-
-    // 2. Agar target user admin hai, toh ensure karein ki database mein aur bhi admins hain
-    if (targetUser.role === 'admin') {
-      const adminCount = await User.countDocuments({ role: 'admin' })
-      if (adminCount <= 1) {
-        throw new AppError('Cannot delete the last admin', 400, 'LAST_ADMIN')
-      }
-    }
-
-    // 3. Safe deletion
-    await User.findByIdAndDelete(targetUserId)
-  }
 
 
   // Leads Management

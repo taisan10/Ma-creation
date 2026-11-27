@@ -3,6 +3,7 @@ import Razorpay from "razorpay";
 import Plan from "../models/CMS/Plan.js";
 import Payment from "../models/LMS/Payment.js";
 import User from "../models/AUTH/User.js";
+import { RefundService } from "./refund.service.js";
 import { env } from "../config/env.js";
 import { AppError } from "../utils/AppError.js";
 
@@ -196,7 +197,7 @@ export class PaymentService {
   /**
    * Process incoming Razorpay webhook
    */
-  static async handleWebhook(rawBody, signature, event, entity) {
+  static async handleWebhook(rawBody, signature, event, entity, payload) {
     if (!env.razorpayWebhookSecret || !signature) {
       throw new AppError("Webhook signature missing", 400, "BAD_REQUEST");
     }
@@ -228,6 +229,16 @@ export class PaymentService {
         { razorpayOrderId: entity.order_id, status: "created" },
         { status: "failed" },
       );
+    }
+
+    if (event === "refund.processed" || event === "refund.created") {
+      const refundEntity = payload?.refund?.entity || entity;
+      const paymentEntity = payload?.payment?.entity;
+      const paymentId = refundEntity?.payment_id || paymentEntity?.id;
+      const refundId = refundEntity?.id;
+      if (paymentId) {
+        await RefundService.handleWebhookRefund(paymentId, refundId);
+      }
     }
   }
 }
