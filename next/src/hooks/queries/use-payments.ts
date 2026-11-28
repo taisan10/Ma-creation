@@ -31,7 +31,9 @@ export interface PaymentRecord {
   razorpayPaymentId?: string;
   amount: number;
   currency: string;
-  status: "created" | "paid" | "failed";
+  status: "created" | "paid" | "failed" | "refunded" | "refund_failed";
+  refundId?: string | null;
+  refundedAt?: string | null;
   verifiedAt?: string;
   createdAt: string;
   updatedAt: string;

@@ -62,11 +62,35 @@ async function tryRefreshToken(): Promise<string | null> {
 }
 
 // 4. Main Universal Fetcher (With Switch-Case Status Handling)
-export async function api<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
+export async function getValidToken(): Promise<string | null> {
   let token = useAuthStore.getState().token;
   if (!token && typeof window !== "undefined" && document.cookie.includes("mac_session=1")) {
     token = await tryRefreshToken();
   }
+  return token;
+}
+
+/**
+ * For heavy binary streaming (Video uploads & HLS video playback),
+ * bypass Next.js dev server 30-second proxy rewrite timeout on localhost
+ * and communicate directly with the Express backend.
+ */
+export function getDirectApiUrl(endpoint: string): string {
+  const clean = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  if (process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.startsWith("http")) {
+    return `${process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "")}${clean}`;
+  }
+  if (
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+  ) {
+    return `http://localhost:5000/api${clean}`;
+  }
+  return `/api${clean}`;
+}
+
+export async function api<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = await getValidToken();
   const isForm = typeof FormData !== "undefined" && options.body instanceof FormData;
 
   const headers: Record<string, string> = {

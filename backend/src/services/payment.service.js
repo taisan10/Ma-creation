@@ -6,6 +6,8 @@ import User from "../models/AUTH/User.js";
 import { RefundService } from "./refund.service.js";
 import { env } from "../config/env.js";
 import { AppError } from "../utils/AppError.js";
+import RefundTicket from "../models/LMS/RefundTicket.js";
+
 
 function getRazorpayClient() {
   if (!env.razorpayKeyId || !env.razorpayKeySecret) {
@@ -176,22 +178,45 @@ export class PaymentService {
     );
   }
 
-  /**
-   * Fetch customer payment history
+   /**
+   * Fetch customer payment history (Web & Flutter Unified)
    */
   static async getUserPayments(userId) {
     const user = await User.findById(userId).select("email name phone company");
     if (!user) throw new AppError("User not found", 404, "NOT_FOUND");
 
+    // 1. Paid aur Refunded dono orders fetch karein
     const payments = await Payment.find({
       user: user._id,
-      status: "paid",
+      status: { $in: ["paid", "refunded"] },
     })
       .populate("plan", "name price billing duration features category")
       .sort({ createdAt: -1 })
-      .limit(100);
+      .limit(100)
+      .lean();
 
-    return { payments, user };
+    if (payments.length === 0) {
+      return { payments: [], user };
+    }
+
+    // 2. Is student ke saare refund tickets indexed query se nikaalein
+    const paymentIds = payments.map((p) => p._id);
+    const tickets = await RefundTicket.find({ payment: { $in: paymentIds } })
+      .select("payment status reason adminNotes resolvedAt razorpayRefundId createdAt")
+      .lean();
+
+    const ticketMap = new Map();
+    for (const t of tickets) {
+      ticketMap.set(String(t.payment), t);
+    }
+
+    // 3. Har payment ke sath uska refund ticket map karein
+    const enrichedPayments = payments.map((p) => ({
+      ...p,
+      refundTicket: ticketMap.get(String(p._id)) || null,
+    }));
+
+    return { payments: enrichedPayments, user };
   }
 
   /**

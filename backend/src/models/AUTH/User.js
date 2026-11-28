@@ -28,6 +28,7 @@ const schema = new mongoose.Schema({
   playbackLocked: { type: Boolean, default: false },
   playbackLockedAt: { type: Date, default: null },
   recordingStrikes: { type: Number, default: 0 },
+  
 }, { timestamps: true })
 
 export default mongoose.model('User',schema)

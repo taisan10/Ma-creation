@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { formatSafeDate } from "@/lib/utils";
+import { formatSafeDate, getInitials } from "@/lib/utils";
 import {
   MessageSquare,
   Mail,
@@ -22,19 +22,35 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/status-badge";
 import type { PaymentRecord } from "@/hooks/queries/use-payments";
 
 interface PaymentDetailsSheetProps {
   payment: PaymentRecord | null;
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  open?: boolean;
+  onClose?: () => void;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function PaymentDetailsSheet({ payment, isOpen, onClose }: PaymentDetailsSheetProps) {
+export function PaymentDetailsSheet({
+  payment,
+  isOpen,
+  open,
+  onClose,
+  onOpenChange,
+}: PaymentDetailsSheetProps) {
   const router = useRouter();
   if (!payment) return null;
+
+  const isSheetOpen = open !== undefined ? open : (isOpen ?? false);
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      if (onOpenChange) onOpenChange(false);
+      if (onClose) onClose();
+    }
+  };
 
   const planName =
     typeof payment.plan === "object" && payment.plan?.name
@@ -46,12 +62,7 @@ export function PaymentDetailsSheet({ payment, isOpen, onClose }: PaymentDetails
   const customerPhone = payment.phone || (typeof payment.user === "object" ? payment.user?.phone : "") || "";
   const customerCompany = payment.company || (typeof payment.user === "object" ? payment.user?.company : "") || "Individual";
 
-  const initials = customerName
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const initials = getInitials(customerName);
 
   const rawPhone = customerPhone.replace(/\D/g, "");
   const cleanPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
@@ -79,10 +90,10 @@ export function PaymentDetailsSheet({ payment, isOpen, onClose }: PaymentDetails
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Sheet open={isSheetOpen} onOpenChange={handleOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-md p-6 overflow-y-auto">
         <SheetHeader className="text-left pb-4 border-b">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 pr-10">
             <Avatar className="h-12 w-12 border">
               <AvatarFallback className="font-semibold text-sm bg-primary/10 text-primary">
                 {initials}
@@ -154,24 +165,7 @@ export function PaymentDetailsSheet({ payment, isOpen, onClose }: PaymentDetails
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Transaction Amount
               </span>
-              <Badge variant="outline" className="gap-1 text-[10px] font-normal">
-                {payment.status === "paid" ? (
-                  <>
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    Verified Paid
-                  </>
-                ) : payment.status === "created" ? (
-                  <>
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                    Abandoned Checkout
-                  </>
-                ) : (
-                  <>
-                    <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
-                    Payment Failed
-                  </>
-                )}
-              </Badge>
+              <StatusBadge status={payment.status} />
             </div>
 
             <div className="text-2xl font-bold tracking-tight text-foreground font-sans">
@@ -246,6 +240,34 @@ export function PaymentDetailsSheet({ payment, isOpen, onClose }: PaymentDetails
                 </span>
               </div>
 
+              {payment.refundId && (
+                <div className="flex items-center justify-between p-2.5">
+                  <span className="text-muted-foreground">Refund ID</span>
+                  <div className="flex items-center gap-1 text-[11px] text-foreground">
+                    <span className="font-medium text-purple-600 dark:text-purple-400">
+                      {payment.refundId}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(payment.refundId!, "Refund ID")}
+                      className="text-muted-foreground hover:text-foreground"
+                      title="Copy Refund ID"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {payment.refundedAt && (
+                <div className="flex items-center justify-between p-2.5">
+                  <span className="text-muted-foreground">Refunded Timestamp</span>
+                  <span className="font-medium text-foreground">
+                    {formatSafeDate(payment.refundedAt, "MMM dd, yyyy • hh:mm a")}
+                  </span>
+                </div>
+              )}
+
               {payment.verifiedAt && (
                 <div className="flex items-center justify-between p-2.5">
                   <span className="text-muted-foreground">Verified Timestamp</span>
@@ -299,7 +321,7 @@ export function PaymentDetailsSheet({ payment, isOpen, onClose }: PaymentDetails
                 size="sm"
                 className="w-full justify-between h-9 text-xs border-primary/20 hover:bg-primary/5 hover:text-primary transition-colors"
                 onClick={() => {
-                  onClose();
+                  handleOpenChange(false);
                   const targetSearch = customerEmail && customerEmail !== "—" ? customerEmail : customerName;
                   router.push(`/admin/users?search=${encodeURIComponent(targetSearch)}`);
                 }}

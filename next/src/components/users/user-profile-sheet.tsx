@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
-import { formatSafeDate } from "@/lib/utils";
+import { formatSafeDate, getInitials } from "@/lib/utils";
 import {
   MessageSquare,
   Mail,
@@ -28,19 +28,30 @@ import type { EnrichedUser } from "@/hooks/queries/use-users";
 
 interface UserProfileSheetProps {
   user: EnrichedUser | null;
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  open?: boolean;
+  onClose?: () => void;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function UserProfileSheet({ user, isOpen, onClose }: UserProfileSheetProps) {
+export function UserProfileSheet({
+  user,
+  isOpen,
+  open,
+  onClose,
+  onOpenChange,
+}: UserProfileSheetProps) {
   if (!user) return null;
 
-  const initials = (user.name || user.email || "U")
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const isSheetOpen = open !== undefined ? open : (isOpen ?? false);
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      if (onOpenChange) onOpenChange(false);
+      if (onClose) onClose();
+    }
+  };
+
+  const initials = getInitials(user.name || user.email);
 
   const rawPhone = (user.phone || "").replace(/\D/g, "");
   const cleanPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
@@ -56,10 +67,10 @@ export function UserProfileSheet({ user, isOpen, onClose }: UserProfileSheetProp
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Sheet open={isSheetOpen} onOpenChange={handleOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-md p-6 overflow-y-auto">
         <SheetHeader className="text-left pb-4 border-b">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 pr-10">
             <Avatar className="h-12 w-12 border">
               <AvatarFallback className="font-semibold text-sm bg-primary/10 text-primary">
                 {initials}

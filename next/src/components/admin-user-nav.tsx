@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogOut, Settings, Globe, Shield } from "lucide-react";
 import { toast } from "sonner";
+import { getInitials } from "@/lib/utils";
 
 import { logout } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -30,14 +31,7 @@ export function AdminUserNav() {
     router.push("/login");
   };
 
-  const initials = user?.name
-    ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : "AD";
+  const initials = getInitials(user?.name, "AD");
 
   return (
     <DropdownMenu>

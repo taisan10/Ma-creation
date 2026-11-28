@@ -101,6 +101,28 @@ export const swaggerSpec = {
           message: { type: "string", example: "Interested in course details" },
         },
       },
+      RefundRequest: {
+        type: "object",
+        required: ["paymentId", "reason"],
+        properties: {
+          paymentId: { type: "string", example: "66f1234567890abcdef12345" },
+          reason: {
+            type: "string",
+            maxLength: 500,
+            example: "Course schedule conflicts with examinations",
+          },
+        },
+      },
+      AdminRefundResolveRequest: {
+        type: "object",
+        properties: {
+          adminNotes: {
+            type: "string",
+            maxLength: 500,
+            example: "Verified student claim and processed decision",
+          },
+        },
+      },
     },
   },
   paths: {
@@ -600,6 +622,119 @@ export const swaggerSpec = {
           200: {
             description: "Array of user payment receipts",
           },
+        },
+      },
+    },
+    "/payments/failed": {
+      post: {
+        tags: ["Payments"],
+        summary: "Mark payment order as failed on modal dismiss/failure",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["razorpayOrderId"],
+                properties: {
+                  razorpayOrderId: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Payment order marked as failed" },
+        },
+      },
+    },
+    "/payments/refund": {
+      post: {
+        tags: ["Payments & Refunds"],
+        summary: "Request refund for a purchased plan (Student)",
+        description: "Creates a refund ticket within the 3-day guarantee window (Rate-limited: 5 requests / 15 mins).",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/RefundRequest" },
+            },
+          },
+        },
+        responses: {
+          201: { description: "Refund ticket created successfully" },
+          400: { description: "Invalid request, not eligible, or past 3-day window" },
+          401: { description: "Unauthorized" },
+        },
+      },
+    },
+    "/admin/refunds": {
+      get: {
+        tags: ["Admin Refunds"],
+        summary: "List all student refund tickets (Admin only)",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: "List of refund tickets with user, plan, and payment details" },
+          401: { description: "Unauthorized" },
+          403: { description: "Forbidden - Admin access required" },
+        },
+      },
+    },
+    "/admin/refunds/{id}/approve": {
+      post: {
+        tags: ["Admin Refunds"],
+        summary: "Approve a refund ticket & trigger Razorpay gateway refund (Admin only)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: "path",
+            name: "id",
+            required: true,
+            schema: { type: "string" },
+            description: "Refund Ticket ID",
+          },
+        ],
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/AdminRefundResolveRequest" },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Refund approved and successfully processed via Razorpay gateway" },
+          400: { description: "Ticket is not in pending_review status" },
+          404: { description: "Ticket not found" },
+        },
+      },
+    },
+    "/admin/refunds/{id}/reject": {
+      post: {
+        tags: ["Admin Refunds"],
+        summary: "Reject a refund ticket request (Admin only)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: "path",
+            name: "id",
+            required: true,
+            schema: { type: "string" },
+            description: "Refund Ticket ID",
+          },
+        ],
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/AdminRefundResolveRequest" },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Refund ticket marked as rejected" },
+          400: { description: "Ticket is not in pending_review status" },
+          404: { description: "Ticket not found" },
         },
       },
     },

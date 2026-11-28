@@ -52,29 +52,33 @@ export async function getHlsManifest(req, res) {
     'Cache-Control': 'no-cache, no-store, must-revalidate',
   })
 
-  // Agar query parameter mein token aaya hai (Flutter / Mobile player)
+  // Agar query parameter mein token aaya hai (Flutter / Mobile player / Browser HLS)
   const token = req.query?.token 
-  if(token){
+  if (token) {
     const stream = await minioClient.getObject(VIDEO_BUCKET, video.hlsManifestKey)
     const chunks = []
-    for await (const chunk of stream){
+    for await (const chunk of stream) {
       chunks.push(chunk)
     }
     let content = Buffer.concat(chunks).toString('utf-8')
 
-    // Key URL aur Segment URLs me ?token= append karein
+    // Append ?token= to child variant playlists (res_1080p.m3u8, res_720p.m3u8, res_360p.m3u8)
     content = content.replace(
-      new RegExp(`(/api/videos/${video._id}/key)`, 'g'),
+      /(res_\w+\.m3u8)(?!\?token=)/g,
       `$1?token=${encodeURIComponent(token)}`
     )
-     content = content.replace(
-      /(segment_\d+\.ts)/g,
+
+    // Key URL aur Segment URLs me ?token= append karein (for single-bitrate manifests)
+    content = content.replace(
+      new RegExp(`(/api/videos/${video._id}/key)(?!\\?token=)`, 'g'),
+      `$1?token=${encodeURIComponent(token)}`
+    )
+    content = content.replace(
+      /(res_\w+_seg_\d+\.ts|segment_\d+\.ts)(?!\?token=)/g,
       `$1?token=${encodeURIComponent(token)}`
     )
     return res.send(content)
-
   }
-
 
   const stream = await minioClient.getObject(VIDEO_BUCKET, video.hlsManifestKey)
   stream.pipe(res)
@@ -100,6 +104,30 @@ export async function getHlsSegment(req, res) {
   })
 
   const objectKey = `${video.hlsDirectory}/${segment}`
+  // kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+  // For variant playlists (res_1080p.m3u8, etc.), propagate token into key URI and segments
+  const token = req.query?.token
+  if (isplaylist && token) {
+    const stream = await minioClient.getObject(VIDEO_BUCKET, objectKey)
+    const chunks = []
+    for await (const chunk of stream) {
+      chunks.push(chunk)
+    }
+    let content = Buffer.concat(chunks).toString('utf-8')
+
+    // Propagate token to Key URL & Segments inside variant playlist
+    content = content.replace(
+      new RegExp(`(/api/videos/${video._id}/key)(?!\\?token=)`, 'g'),
+      `$1?token=${encodeURIComponent(token)}`
+    )
+    content = content.replace(
+      /(res_\w+_seg_\d+\.ts|segment_\d+\.ts)(?!\?token=)/g,
+      `$1?token=${encodeURIComponent(token)}`
+    )
+    return res.send(content)
+  }
+// vbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
   const stream = await minioClient.getObject(VIDEO_BUCKET, objectKey)
   stream.pipe(res)
 }

@@ -18,7 +18,6 @@ import {
   RefreshCw,
   TrendingUp,
   Calendar as CalendarIcon,
-  ShieldCheck,
   ArrowRight,
   AlertTriangle,
 } from "lucide-react";
@@ -33,6 +32,8 @@ import {
 } from "recharts";
 
 import { useAdminDashboard } from "@/hooks/queries/use-admin-dashboard";
+import { formatINR } from "@/lib/utils";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -336,9 +337,9 @@ export default function AdminDashboardPage() {
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
           <Badge
             variant="outline"
-            className="gap-1.5 px-3 py-1.5 text-xs border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium"
+            className="gap-1.5 px-2.5 py-1 text-xs border-border bg-transparent text-foreground/80 font-normal"
           >
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
             DRM Shield: Active (0 Locks)
           </Badge>
           <Button
@@ -397,7 +398,8 @@ export default function AdminDashboardPage() {
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div className="text-2xl font-bold">{item.value}</div>
-                    <Badge variant="secondary" className="text-[11px] font-normal text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-0">
+                    <Badge variant="outline" className="text-[11px] font-normal gap-1 border-border bg-transparent text-foreground/80">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                       {item.trend}
                     </Badge>
                   </div>
@@ -578,18 +580,9 @@ export default function AdminDashboardPage() {
                   <TableRow key={tx.id}>
                     <TableCell className="font-medium text-xs">{tx.student}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{tx.plan}</TableCell>
-                    <TableCell className="text-xs font-semibold">₹{tx.amount.toLocaleString("en-IN")}</TableCell>
+                    <TableCell className="text-xs font-semibold">{formatINR(tx.amount)}</TableCell>
                     <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={
-                          tx.status === "paid"
-                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px]"
-                            : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px]"
-                        }
-                      >
-                        {tx.status === "paid" ? "Paid" : "Pending"}
-                      </Badge>
+                      <StatusBadge status={tx.status} />
                     </TableCell>
                     <TableCell className="text-right text-xs text-muted-foreground">{tx.date}</TableCell>
                   </TableRow>

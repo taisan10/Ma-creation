@@ -3,32 +3,24 @@
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import {
-  CreditCard,
-  Download,
-  RefreshCw,
-  Search,
-  X,
   Eye,
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  Check,
-  SearchX,
   Copy,
-  Calendar,
   AlertTriangle,
+  RotateCcw,
 } from "lucide-react";
-import { usePayments, type PaymentRecord } from "@/hooks/queries/use-payments";
+import { usePayments } from "@/hooks/queries/use-payments";
+import { useRefundTickets } from "@/hooks/queries/use-refund-tickets";
+import { useUsersIntelligence, type EnrichedUser } from "@/hooks/queries/use-users";
 import { useDebounce } from "@/hooks/use-debounce";
-import { formatSafeDate } from "@/lib/utils";
+import { formatSafeDate, formatINR, getInitials } from "@/lib/utils";
 import { exportPaymentsToCsv } from "@/lib/export-payments-csv";
+import { filterItemsByDatePreset, type DatePreset, type CustomDateRange } from "@/lib/date-filters";
 import { PaymentsKpiCards } from "@/components/payments/payments-kpi-cards";
 import { PaymentDetailsSheet } from "@/components/payments/payment-details-sheet";
+import { RefundReviewSheet } from "@/components/payments/refund-review-sheet";
+import { UserProfileSheet } from "@/components/users/user-profile-sheet";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -39,38 +31,38 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { AdminPageHeader } from "@/components/ui/admin-page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { DatePresetFilter } from "@/components/ui/date-preset-filter";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  DataTablePagination,
+  DataTableSearch,
+  DataTableSort,
+  DataTableEmpty,
+  DataTableFilterTabs,
+  type SortOptionItem,
+  type FilterTabItem,
+} from "@/components/ui/data-table";
 
-type FilterTab = "all" | "paid" | "created" | "failed";
+type FilterTab = "all" | "paid" | "created" | "failed" | "refunds";
 type SortOption = "newest" | "oldest" | "amount_high" | "amount_low";
-type DatePreset = "all" | "today" | "7d" | "this_month" | "last_month";
 
-const DATE_PRESET_LABELS: Record<DatePreset, string> = {
-  all: "All Dates",
-  today: "Today",
-  "7d": "Last 7 Days",
-  this_month: "This Month",
-  last_month: "Last Month",
-};
-
-const SORT_LABELS: Record<SortOption, string> = {
-  newest: "Newest",
-  oldest: "Oldest",
-  amount_high: "Highest ₹",
-  amount_low: "Lowest ₹",
-};
+const SORT_OPTIONS: SortOptionItem<SortOption>[] = [
+  { key: "newest", label: "Newest" },
+  { key: "oldest", label: "Oldest" },
+  { key: "amount_high", label: "Highest ₹" },
+  { key: "amount_low", label: "Lowest ₹" },
+];
 
 export default function AdminPaymentsPage() {
   const [filterTab, setFilterTab] = useState<FilterTab>("all");
   const [datePreset, setDatePreset] = useState<DatePreset>("all");
+  const [customRange, setCustomRange] = useState<CustomDateRange | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("newest");
-  const [selectedPayment, setSelectedPayment] = useState<PaymentRecord | null>(null);
+  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
+  const [selectedRefundTicketId, setSelectedRefundTicketId] = useState<string | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -78,45 +70,56 @@ export default function AdminPaymentsPage() {
 
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  // TanStack Query Intelligence Hook
+  // TanStack Query Intelligence Hooks
   const { payments, summary, isLoading, isFetching, error, refetch } = usePayments();
+  const {
+    tickets: refundTickets,
+    stats: refundStats,
+    isLoading: isRefundsLoading,
+    isFetching: isRefundsFetching,
+    error: refundsError,
+    refetch: refetchRefunds,
+  } = useRefundTickets();
 
-  // Filtered & Sorted dataset
+  // Users Hook for Student 360° Profile inspection
+  const { users } = useUsersIntelligence();
+  const selectedStudentUser = useMemo(
+    () => (selectedStudentId ? users.find((u: EnrichedUser) => u._id === selectedStudentId) || null : null),
+    [users, selectedStudentId]
+  );
+
+  // Reactive Sheet Selectors (Always live & synced with TanStack Query cache)
+  const activePayment = useMemo(
+    () => (selectedPaymentId ? payments.find((p) => p._id === selectedPaymentId) || null : null),
+    [payments, selectedPaymentId]
+  );
+
+  const activeRefundTicket = useMemo(
+    () =>
+      selectedRefundTicketId
+        ? refundTickets.find((t) => t._id === selectedRefundTicketId) || null
+        : null,
+    [refundTickets, selectedRefundTicketId]
+  );
+
+  const activeRefundStudentUser = useMemo(() => {
+    if (!activeRefundTicket?.user?._id) return null;
+    return users.find((u: EnrichedUser) => u._id === activeRefundTicket.user._id) || null;
+  }, [users, activeRefundTicket]);
+
+  const isRefundsTab = filterTab === "refunds";
+
+  // Filtered & Sorted Payments dataset
   const processedPayments = useMemo(() => {
     let result = [...payments];
 
     // 1. Tab Filtering
-    if (filterTab !== "all") {
+    if (filterTab !== "all" && filterTab !== "refunds") {
       result = result.filter((p) => p.status === filterTab);
     }
 
-    // 2. Date Preset Filtering
-    if (datePreset !== "all") {
-      const now = new Date();
-      result = result.filter((p) => {
-        if (!p.createdAt) return false;
-        const createdAt = new Date(p.createdAt);
-
-        if (datePreset === "today") {
-          const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          return createdAt >= startOfToday;
-        }
-        if (datePreset === "7d") {
-          const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          return createdAt >= sevenDaysAgo;
-        }
-        if (datePreset === "this_month") {
-          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-          return createdAt >= startOfMonth;
-        }
-        if (datePreset === "last_month") {
-          const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-          const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-          return createdAt >= startOfLastMonth && createdAt <= endOfLastMonth;
-        }
-        return true;
-      });
-    }
+    // 2. Date Filtering via Unified Date Engine
+    result = filterItemsByDatePreset(result, (p) => p.createdAt, datePreset, customRange);
 
     // 3. Debounced Search Filtering
     if (debouncedSearch.trim()) {
@@ -160,10 +163,66 @@ export default function AdminPaymentsPage() {
     });
 
     return result;
-  }, [payments, filterTab, datePreset, debouncedSearch, sortOption]);
+  }, [payments, filterTab, datePreset, customRange, debouncedSearch, sortOption]);
 
-  // Pagination calculations
-  const totalItems = processedPayments.length;
+  // Filtered & Sorted Refund Tickets dataset
+  const processedRefunds = useMemo(() => {
+    let result = [...refundTickets];
+
+    // Date Filtering via Unified Date Engine
+    result = filterItemsByDatePreset(result, (t) => t.createdAt, datePreset, customRange);
+
+    // Search Filtering
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase().trim();
+      result = result.filter((t) => {
+        const name = (t.user?.name || "").toLowerCase();
+        const email = (t.user?.email || "").toLowerCase();
+        const phone = (t.user?.phone || "").toLowerCase();
+        const plan = (t.plan?.name || "").toLowerCase();
+        const reason = (t.reason || "").toLowerCase();
+        const payId = (t.razorpayPaymentId || "").toLowerCase();
+        const orderId = (t.payment?.razorpayOrderId || "").toLowerCase();
+
+        return (
+          name.includes(q) ||
+          email.includes(q) ||
+          phone.includes(q) ||
+          plan.includes(q) ||
+          reason.includes(q) ||
+          payId.includes(q) ||
+          orderId.includes(q)
+        );
+      });
+    }
+
+    // Sorting
+    result.sort((a, b) => {
+      if (sortOption === "newest") {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      if (sortOption === "oldest") {
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+      if (sortOption === "amount_high") {
+        return (b.amount || 0) - (a.amount || 0);
+      }
+      if (sortOption === "amount_low") {
+        return (a.amount || 0) - (b.amount || 0);
+      }
+      return 0;
+    });
+
+    return result;
+  }, [refundTickets, datePreset, customRange, debouncedSearch, sortOption]);
+
+  // Unified pagination calculations
+  const totalItems = isRefundsTab ? processedRefunds.length : processedPayments.length;
+  const isTableLoading = isRefundsTab ? isRefundsLoading : isLoading;
+  const isTableFetching = isRefundsTab ? isRefundsFetching : isFetching;
+  const tableError = isRefundsTab ? refundsError : error;
+  const handleRefetchTable = isRefundsTab ? refetchRefunds : refetch;
+
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const startIndex = (safeCurrentPage - 1) * pageSize;
@@ -172,6 +231,10 @@ export default function AdminPaymentsPage() {
   const paginatedPayments = useMemo(() => {
     return processedPayments.slice(startIndex, endIndex);
   }, [processedPayments, startIndex, endIndex]);
+
+  const paginatedRefunds = useMemo(() => {
+    return processedRefunds.slice(startIndex, endIndex);
+  }, [processedRefunds, startIndex, endIndex]);
 
   const handleExportCsv = () => {
     if (processedPayments.length === 0) {
@@ -195,175 +258,86 @@ export default function AdminPaymentsPage() {
     setSearchQuery("");
     setFilterTab("all");
     setDatePreset("all");
+    setCustomRange(undefined);
     setSortOption("newest");
     setCurrentPage(1);
   };
 
-  const filterTabs = [
-    { key: "all" as const, label: "All", count: summary.totalOrders },
-    { key: "paid" as const, label: "Paid", count: summary.paidCount },
-    { key: "created" as const, label: "Abandoned", count: summary.abandonedCount },
-    { key: "failed" as const, label: "Failed", count: summary.failedCount },
+  const filterTabs: FilterTabItem<FilterTab>[] = [
+    { key: "all", label: "All", count: summary.totalOrders },
+    { key: "paid", label: "Paid", count: summary.paidCount },
+    { key: "created", label: "Abandoned", count: summary.abandonedCount },
+    { key: "failed", label: "Failed", count: summary.failedCount },
+    {
+      key: "refunds",
+      label: "Refunds",
+      count: refundStats.pendingCount,
+      hasAlert: refundStats.pendingCount > 0,
+    },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <CreditCard className="h-6 w-6 text-primary" />
-            Payments & Order Records
-          </h1>
-          <p className="text-muted-foreground text-sm mt-0.5">
-            Audit Razorpay transaction settlements, order IDs, and follow up with abandoned checkouts.
-          </p>
-        </div>
+      {/* Top Banner (Global AdminPageHeader) */}
+      <AdminPageHeader
+        title="Payments & Order Records"
+        description="Audit Razorpay transaction settlements, order IDs, and follow up with abandoned checkouts."
+        onExportCsv={handleExportCsv}
+        onRefresh={handleRefetchTable}
+        isRefreshing={isTableFetching}
+      />
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCsv}
-            disabled={isLoading || Boolean(error) || processedPayments.length === 0}
-            className="gap-1.5 text-xs"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Export CSV
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="text-xs"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isFetching ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      {/* Top 4 Financial KPI Metrics */}
+      {/* Top 4 KPI Metrics */}
       <PaymentsKpiCards summary={summary} isLoading={isLoading} error={error} />
 
-      {/* Search, Filter Tabs & Sorter Toolbar (Matching Users Module Single-Row Standard) */}
+      {/* Search, Filter Tabs & Sorter Toolbar */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-        {/* Search Input with Instant Clear */}
-        <div className="relative w-full lg:w-72">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input
-            placeholder="Search customer, email, plan, razorpay ID..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="pl-9 pr-8 h-9 text-xs"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery("");
-                setCurrentPage(1);
-              }}
-              className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
-              title="Clear search"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
+        {/* Search Input with Instant Clear (Global DataTableSearch) */}
+        <DataTableSearch
+          value={searchQuery}
+          onChange={(val) => {
+            setSearchQuery(val);
+            setCurrentPage(1);
+          }}
+          placeholder={
+            isRefundsTab
+              ? "Search student, email, plan, refund ID..."
+              : "Search customer, email, plan, razorpay ID..."
+          }
+        />
 
         {/* Filters and Sorters */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Status Tabs with Clean Count Pills */}
-          <div className="flex items-center gap-1 border rounded-lg bg-muted/40 p-1">
-            {filterTabs.map((tab) => {
-              const isActive = filterTab === tab.key;
-              return (
-                <Button
-                  key={tab.key}
-                  variant={isActive ? "default" : "ghost"}
-                  size="sm"
-                  className="h-7 px-2.5 text-xs rounded-md font-medium"
-                  onClick={() => {
-                    setFilterTab(tab.key);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <span>{tab.label}</span>
-                  <span
-                    className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] leading-none ${
-                      isActive
-                        ? "bg-primary-foreground/20 text-primary-foreground"
-                        : "bg-muted-foreground/15 text-muted-foreground"
-                    }`}
-                  >
-                    {tab.count}
-                  </span>
-                </Button>
-              );
-            })}
-          </div>
+          {/* Status Tabs with Clean Count Pills (Global DataTableFilterTabs) */}
+          <DataTableFilterTabs
+            tabs={filterTabs}
+            activeTab={filterTab}
+            onChange={(key) => {
+              setFilterTab(key);
+              setCurrentPage(1);
+            }}
+          />
 
-          {/* Date Preset Filter Dropdown Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant={datePreset !== "all" ? "secondary" : "outline"}
-                  size="sm"
-                  className="h-9 gap-1.5 text-xs font-normal"
-                >
-                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span>Date: {DATE_PRESET_LABELS[datePreset]}</span>
-                  <ChevronDown className="h-3 w-3 text-muted-foreground ml-0.5" />
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end" className="w-36 text-xs">
-              {(Object.keys(DATE_PRESET_LABELS) as DatePreset[]).map((key) => (
-                <DropdownMenuItem
-                  key={key}
-                  onClick={() => {
-                    setDatePreset(key);
-                    setCurrentPage(1);
-                  }}
-                  className="flex items-center justify-between cursor-pointer"
-                >
-                  <span>{DATE_PRESET_LABELS[key]}</span>
-                  {datePreset === key && <Check className="h-3.5 w-3.5 text-primary ml-auto" />}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Unified Date Preset Filter (Global DatePresetFilter) */}
+          <DatePresetFilter
+            value={datePreset}
+            onChange={(preset) => {
+              setDatePreset(preset);
+              setCurrentPage(1);
+            }}
+            customRange={customRange}
+            onCustomRangeChange={(range) => {
+              setCustomRange(range);
+              setCurrentPage(1);
+            }}
+          />
 
-          {/* Compact Sorter Dropdown Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs font-normal">
-                  <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span>Sort: {SORT_LABELS[sortOption]}</span>
-                  <ChevronDown className="h-3 w-3 text-muted-foreground ml-0.5" />
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end" className="w-36 text-xs">
-              {(Object.keys(SORT_LABELS) as SortOption[]).map((key) => (
-                <DropdownMenuItem
-                  key={key}
-                  onClick={() => setSortOption(key)}
-                  className="flex items-center justify-between cursor-pointer"
-                >
-                  <span>{SORT_LABELS[key]}</span>
-                  {sortOption === key && <Check className="h-3.5 w-3.5 text-primary ml-auto" />}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Sorter Dropdown (Global DataTableSort) */}
+          <DataTableSort
+            value={sortOption}
+            onChange={setSortOption}
+            options={SORT_OPTIONS}
+          />
         </div>
       </div>
 
@@ -371,18 +345,30 @@ export default function AdminPaymentsPage() {
       <Card className="overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead className="w-[260px]">Customer</TableHead>
-              <TableHead className="w-[190px]">Plan / Course</TableHead>
-              <TableHead className="w-[190px]">Gateway Ref</TableHead>
-              <TableHead className="w-[130px]">Status</TableHead>
-              <TableHead className="w-[150px]">Date</TableHead>
-              <TableHead className="w-[130px] text-right">Payment</TableHead>
-              <TableHead className="text-right w-[60px]">Actions</TableHead>
-            </TableRow>
+            {isRefundsTab ? (
+              <TableRow>
+                <TableHead className="w-[240px]">Student</TableHead>
+                <TableHead className="w-[180px]">Plan / Course</TableHead>
+                <TableHead className="w-[120px]">Refund Amount</TableHead>
+                <TableHead className="w-[230px]">Student Reason</TableHead>
+                <TableHead className="w-[140px]">Status</TableHead>
+                <TableHead className="w-[150px]">Date Raised</TableHead>
+                <TableHead className="text-right w-[80px]">Action</TableHead>
+              </TableRow>
+            ) : (
+              <TableRow>
+                <TableHead className="w-[260px]">Customer</TableHead>
+                <TableHead className="w-[190px]">Plan / Course</TableHead>
+                <TableHead className="w-[190px]">Gateway Ref</TableHead>
+                <TableHead className="w-[130px]">Status</TableHead>
+                <TableHead className="w-[150px]">Date</TableHead>
+                <TableHead className="w-[130px] text-right">Payment</TableHead>
+                <TableHead className="text-right w-[60px]">Actions</TableHead>
+              </TableRow>
+            )}
           </TableHeader>
           <TableBody>
-            {isLoading ? (
+            {isTableLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i} className="h-[52px]">
                   <TableCell>
@@ -390,98 +376,80 @@ export default function AdminPaymentsPage() {
                       <Skeleton className="h-8 w-8 rounded-full" />
                       <div className="space-y-1">
                         <Skeleton className="h-3.5 w-24" />
-                        <Skeleton className="h-2.5 w-16" />
+                        <Skeleton className="h-2.5 w-36" />
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell><Skeleton className="h-3.5 w-28" /></TableCell>
-                  <TableCell><Skeleton className="h-3.5 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
-                  <TableCell><Skeleton className="h-3.5 w-24" /></TableCell>
-                  <TableCell className="text-right"><Skeleton className="h-3.5 w-16 ml-auto" /></TableCell>
-                  <TableCell className="text-right"><Skeleton className="h-7 w-7 ml-auto rounded-md" /></TableCell>
+                  <TableCell>
+                    <Skeleton className="h-3.5 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-3.5 w-28" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-3.5 w-20" />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Skeleton className="h-3.5 w-16 ml-auto" />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Skeleton className="h-7 w-7 rounded ml-auto" />
+                  </TableCell>
                 </TableRow>
               ))
-            ) : error ? (
+            ) : tableError ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-56 text-center">
-                  <div className="flex flex-col items-center justify-center gap-2.5 max-w-sm mx-auto py-6">
-                    <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
-                      <AlertTriangle className="h-5 w-5" />
-                    </div>
-                    <div className="font-semibold text-sm text-foreground">
-                      Failed to load payment records
-                    </div>
-                    <p className="text-xs text-muted-foreground text-center">
-                      {error instanceof Error
-                        ? error.message
-                        : "An unexpected network or server error occurred while retrieving transactions."}
-                    </p>
+                <TableCell colSpan={7} className="h-44 text-center">
+                  <div className="flex flex-col items-center justify-center gap-2 text-destructive">
+                    <AlertTriangle className="h-8 w-8" />
+                    <div className="font-semibold text-sm">Failed to load records from gateway</div>
+                    <p className="text-xs text-muted-foreground">{tableError.message}</p>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 text-xs mt-1 gap-1.5 border-destructive/30 hover:bg-destructive/5 hover:text-destructive"
-                      onClick={() => refetch()}
-                      disabled={isFetching}
+                      className="h-8 text-xs mt-1"
+                      onClick={() => handleRefetchTable()}
+                      disabled={isTableFetching}
                     >
-                      <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
                       Retry Connection
                     </Button>
                   </div>
                 </TableCell>
               </TableRow>
-            ) : paginatedPayments.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="h-52 text-center">
-                  <div className="flex flex-col items-center justify-center gap-2 max-w-sm mx-auto py-6">
-                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
-                      <SearchX className="h-5 w-5" />
-                    </div>
-                    <div className="font-semibold text-sm">No payment records found</div>
-                    <p className="text-xs text-muted-foreground text-center">
-                      {searchQuery.trim()
-                        ? `No transactions matched "${searchQuery}". Check for typos or reset your search.`
-                        : datePreset !== "all"
-                        ? `No payment records found for "${DATE_PRESET_LABELS[datePreset]}" under the "${filterTab}" filter.`
-                        : `No payment records under the "${filterTab}" filter.`}
-                    </p>
-                    {(searchQuery.trim() || filterTab !== "all" || datePreset !== "all") && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs mt-1"
-                        onClick={resetAllFilters}
-                      >
-                        Reset Filters
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              paginatedPayments.map((p) => {
-                const planName =
-                  typeof p.plan === "object" && p.plan?.name ? p.plan.name : "Custom Plan";
-                const customerName =
-                  p.name || (typeof p.user === "object" ? p.user?.name : "") || "Customer";
-                const customerEmail =
-                  p.email || (typeof p.user === "object" ? p.user?.email : "") || "";
-
-                const initials = customerName
-                  .split(" ")
-                  .map((w) => w[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase();
-
-                const refId = p.razorpayPaymentId || p.razorpayOrderId || "—";
+            ) : totalItems === 0 ? (
+              /* Global DataTableEmpty */
+              <DataTableEmpty
+                colSpan={7}
+                title={isRefundsTab ? "No refund requests found" : "No payment records found"}
+                description={
+                  searchQuery.trim()
+                    ? `No records matched "${searchQuery}". Check for typos or reset your search.`
+                    : isRefundsTab
+                    ? "All student course enrollments are in good standing. No pending tickets."
+                    : `No payment records under the "${filterTab}" filter.`
+                }
+                onReset={
+                  searchQuery.trim() || filterTab !== "all" || datePreset !== "all"
+                    ? resetAllFilters
+                    : undefined
+                }
+              />
+            ) : isRefundsTab ? (
+              paginatedRefunds.map((ticket) => {
+                const studentName = ticket.user?.name || "Student";
+                const studentEmail = ticket.user?.email || "—";
+                const planName = ticket.plan?.name || "Training Plan";
+                const initials = getInitials(studentName);
 
                 return (
                   <TableRow
-                    key={p._id}
+                    key={ticket._id}
                     className="h-[52px] hover:bg-muted/40 transition-colors"
                   >
-                    {/* Customer */}
+                    {/* Student */}
                     <TableCell>
                       <div className="flex items-center gap-2.5">
                         <Avatar className="h-8 w-8 border shrink-0">
@@ -492,13 +460,109 @@ export default function AdminPaymentsPage() {
                         <div className="min-w-0">
                           <button
                             type="button"
-                            onClick={() => setSelectedPayment(p)}
-                            className="font-semibold text-xs text-foreground hover:underline text-left truncate block max-w-[170px]"
-                            title={customerName}
+                            onClick={() => {
+                              if (ticket.user?._id) setSelectedStudentId(ticket.user._id);
+                            }}
+                            className="font-medium text-xs text-foreground hover:underline truncate text-left block max-w-[180px]"
+                            title="View student 360 profile"
+                          >
+                            {studentName}
+                          </button>
+                          <div
+                            className="text-[11px] text-muted-foreground truncate max-w-[180px]"
+                            title={studentEmail}
+                          >
+                            {studentEmail}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+
+                    {/* Plan */}
+                    <TableCell>
+                      <span className="font-medium text-xs text-foreground line-clamp-1" title={planName}>
+                        {planName}
+                      </span>
+                    </TableCell>
+
+                    {/* Amount */}
+                    <TableCell>
+                      <span className="font-semibold text-xs font-sans text-foreground">
+                        {formatINR(ticket.amount)}
+                      </span>
+                    </TableCell>
+
+                    {/* Reason */}
+                    <TableCell>
+                      <p className="text-xs text-muted-foreground line-clamp-2 max-w-[220px]" title={ticket.reason}>
+                        {ticket.reason}
+                      </p>
+                    </TableCell>
+
+                    {/* Status Badge (Global StatusBadge) */}
+                    <TableCell>
+                      <StatusBadge status={ticket.status} />
+                    </TableCell>
+
+                    {/* Date Raised */}
+                    <TableCell className="text-xs text-muted-foreground">
+                      {formatSafeDate(ticket.createdAt, "dd MMM yyyy, hh:mm a")}
+                    </TableCell>
+
+                    {/* Action Button */}
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedRefundTicketId(ticket._id)}
+                        className="h-7 text-xs px-2.5 gap-1 font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        <span>Review</span>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            ) : (
+              paginatedPayments.map((p) => {
+                const planName =
+                  typeof p.plan === "object" && p.plan?.name ? p.plan.name : "Custom Plan";
+                const customerName =
+                  p.name || (typeof p.user === "object" ? p.user?.name : "") || "Customer";
+                const customerEmail =
+                  p.email || (typeof p.user === "object" ? p.user?.email : "") || "—";
+                const initials = getInitials(customerName);
+
+                return (
+                  <TableRow
+                    key={p._id}
+                    className="h-[52px] hover:bg-muted/40 transition-colors"
+                  >
+                    {/* Customer Identity */}
+                    <TableCell>
+                      <div className="flex items-center gap-2.5">
+                        <Avatar className="h-8 w-8 border shrink-0">
+                          <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
+                            {initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const userId = typeof p.user === "object" ? p.user?._id : p.user;
+                              if (userId) setSelectedStudentId(userId);
+                            }}
+                            className="font-medium text-xs text-foreground hover:underline truncate text-left block max-w-[190px]"
+                            title="Inspect Student Profile"
                           >
                             {customerName}
                           </button>
-                          <div className="text-[11px] text-muted-foreground truncate max-w-[170px]" title={customerEmail}>
+                          <div
+                            className="text-[11px] text-muted-foreground truncate max-w-[190px]"
+                            title={customerEmail}
+                          >
                             {customerEmail}
                           </div>
                         </div>
@@ -507,92 +571,80 @@ export default function AdminPaymentsPage() {
 
                     {/* Plan */}
                     <TableCell>
-                      <div className="text-xs font-medium text-foreground truncate max-w-[180px]" title={planName}>
+                      <span className="font-medium text-xs text-foreground line-clamp-1" title={planName}>
                         {planName}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground truncate max-w-[180px]">
-                        {p.company || "Individual"}
-                      </div>
+                      </span>
                     </TableCell>
 
                     {/* Gateway Ref */}
                     <TableCell>
-                      <div className="flex items-center gap-1 text-[11px] text-foreground">
-                        <span className="font-medium truncate max-w-[120px]" title={refId}>
-                          {refId.length > 14 ? `${refId.slice(0, 6)}...${refId.slice(-6)}` : refId}
-                        </span>
-                        {refId !== "—" && (
+                      {p.razorpayPaymentId ? (
+                        <div className="flex items-center gap-1.5 group">
+                          <span
+                            className="font-mono text-[11px] text-muted-foreground truncate max-w-[130px]"
+                            title={p.razorpayPaymentId}
+                          >
+                            {p.razorpayPaymentId}
+                          </span>
                           <button
                             type="button"
-                            onClick={() => copyToClipboard(refId, "Reference ID")}
-                            className="text-muted-foreground hover:text-foreground shrink-0"
-                            title="Copy ID"
+                            onClick={() => copyToClipboard(p.razorpayPaymentId!, "Payment ID")}
+                            className="text-muted-foreground/60 hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Copy Payment ID"
                           >
                             <Copy className="h-3 w-3" />
                           </button>
-                        )}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">
-                        {p.razorpayPaymentId ? "Payment Captured" : "Order Created"}
-                      </div>
+                        </div>
+                      ) : p.razorpayOrderId ? (
+                        <div className="flex items-center gap-1.5 group">
+                          <span
+                            className="font-mono text-[11px] text-muted-foreground/80 truncate max-w-[130px]"
+                            title={p.razorpayOrderId}
+                          >
+                            {p.razorpayOrderId}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(p.razorpayOrderId!, "Order ID")}
+                            className="text-muted-foreground/60 hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Copy Order ID"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground/60">—</span>
+                      )}
                     </TableCell>
 
-                    {/* Status */}
+                    {/* Status Badge (Global StatusBadge) */}
                     <TableCell>
-                      <Badge variant="outline" className="gap-1 text-[10px] font-normal py-0.5">
-                        {p.status === "paid" ? (
-                          <>
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                            Paid
-                          </>
-                        ) : p.status === "created" ? (
-                          <>
-                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                            Abandoned
-                          </>
-                        ) : (
-                          <>
-                            <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
-                            Failed
-                          </>
-                        )}
-                      </Badge>
+                      <StatusBadge status={p.status} />
                     </TableCell>
 
                     {/* Date */}
-                    <TableCell>
-                      <div className="text-xs text-foreground">
-                        {formatSafeDate(p.createdAt, "MMM dd, yyyy")}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">
-                        {formatSafeDate(p.createdAt, "hh:mm a")}
-                      </div>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {formatSafeDate(p.createdAt, "dd MMM yyyy, hh:mm a")}
                     </TableCell>
 
-                    {/* Payment Amount (Right-aligned standard font) */}
+                    {/* Payment Amount */}
                     <TableCell className="text-right">
-                      <div className="text-xs font-semibold text-foreground font-sans">
-                        ₹{(p.amount || 0).toLocaleString("en-IN")}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">
-                        {p.currency || "INR"}
-                      </div>
+                      <span className="text-xs font-semibold font-sans text-foreground">
+                        {formatINR(p.amount)}
+                      </span>
                     </TableCell>
 
-                    {/* Actions */}
+                    {/* Action */}
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          title="View Order Details"
-                          onClick={() => setSelectedPayment(p)}
-                        >
-                          <Eye className="h-4 w-4" />
-                          <span className="sr-only">View Order Details</span>
-                        </Button>
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => setSelectedPaymentId(p._id)}
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                        title="View Payment Breakdown"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 );
@@ -601,72 +653,49 @@ export default function AdminPaymentsPage() {
           </TableBody>
         </Table>
 
-        {/* Pagination Bar */}
-        {!isLoading && totalItems > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t bg-muted/10 text-xs">
-            <div className="text-muted-foreground">
-              Showing <span className="font-medium text-foreground">{startIndex + 1}</span> to{" "}
-              <span className="font-medium text-foreground">{endIndex}</span> of{" "}
-              <span className="font-medium text-foreground">{totalItems}</span> records
-            </div>
-
-            <div className="flex items-center gap-3">
-              {/* Rows per page selector */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-muted-foreground">Rows:</span>
-                {[10, 25, 50].map((size) => (
-                  <Button
-                    key={size}
-                    variant={pageSize === size ? "secondary" : "ghost"}
-                    size="sm"
-                    className="h-6 w-7 p-0 text-xs font-normal"
-                    onClick={() => {
-                      setPageSize(size);
-                      setCurrentPage(1);
-                    }}
-                  >
-                    {size}
-                  </Button>
-                ))}
-              </div>
-
-              {/* Prev / Next controls */}
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  className="h-7 w-7"
-                  disabled={safeCurrentPage <= 1}
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  title="Previous Page"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                </Button>
-                <span className="text-xs text-muted-foreground px-1 font-sans">
-                  Page <span className="font-medium text-foreground">{safeCurrentPage}</span> of{" "}
-                  <span className="font-medium text-foreground">{totalPages}</span>
-                </span>
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  className="h-7 w-7"
-                  disabled={safeCurrentPage >= totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  title="Next Page"
-                >
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-          </div>
+        {/* Global Pagination Bar */}
+        {!isTableLoading && totalItems > 0 && (
+          <DataTablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            itemName={isRefundsTab ? "refund requests" : "payments"}
+          />
         )}
       </Card>
 
-      {/* 360° Payment & Order Slide-over Sheet */}
+      {/* Transaction Details Inspector Sheet */}
       <PaymentDetailsSheet
-        payment={selectedPayment}
-        isOpen={Boolean(selectedPayment)}
-        onClose={() => setSelectedPayment(null)}
+        payment={activePayment}
+        open={Boolean(activePayment)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedPaymentId(null);
+        }}
+      />
+
+      {/* Refund Decision Sheet */}
+      <RefundReviewSheet
+        ticket={activeRefundTicket}
+        studentUser={activeRefundStudentUser}
+        open={Boolean(activeRefundTicket)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedRefundTicketId(null);
+        }}
+        onViewStudent={(studentId) => {
+          setSelectedStudentId(studentId);
+        }}
+      />
+
+      {/* Student 360° Intelligence Sheet */}
+      <UserProfileSheet
+        user={selectedStudentUser}
+        open={Boolean(selectedStudentUser)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedStudentId(null);
+        }}
       />
     </div>
   );

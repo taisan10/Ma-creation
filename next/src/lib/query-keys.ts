@@ -25,6 +25,10 @@ export const adminKeys = {
   payments: (filters?: { status?: string; page?: number }) =>
     [...adminKeys.all, "payments", filters] as const,
 
+  // Refunds & Support Tickets
+  refunds: () =>
+    [...adminKeys.all, "refunds"] as const,
+
   // Catalog (Services & Plans)
   catalog: (resource?: "services" | "plans") =>
     [...adminKeys.all, "catalog", resource] as const,
@@ -52,6 +56,10 @@ export const adminKeys = {
     [...adminKeys.all, "courses"] as const,
   course: (id: string) =>
     [...adminKeys.all, "courses", "detail", id] as const,
+  categories: () =>
+    [...adminKeys.all, "categories"] as const,
+  videos: (courseId?: string) =>
+    [...adminKeys.all, "videos", courseId] as const,
 
   // Security Incidents & DRM Strikes
   security: (status?: string) =>

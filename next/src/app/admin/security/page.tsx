@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react";
 import {
   ShieldAlert,
-  ShieldCheck,
   RefreshCw,
   Search,
   CheckCircle2,
@@ -19,6 +18,7 @@ import { useSecurityIncidents, type SecurityIncident } from "@/hooks/queries/use
 import { useIncidentActions } from "@/hooks/mutations/use-incident-actions";
 import { useDebounce } from "@/hooks/use-debounce";
 import { formatSafeDate } from "@/lib/utils";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { SecurityKpiCards } from "@/components/security/security-kpi-cards";
 import {
   ResolveIncidentDialog,
@@ -135,9 +135,9 @@ export default function AdminSecurityPage() {
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <Badge
             variant="outline"
-            className="gap-1.5 px-3 py-1.5 text-xs border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium"
+            className="gap-1.5 px-2.5 py-1 text-xs border-border bg-transparent text-foreground/80 font-normal"
           >
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
             DRM Shield: Active
           </Badge>
           <Button
@@ -252,23 +252,13 @@ export default function AdminSecurityPage() {
 
                       <Badge
                         variant="outline"
-                        className="text-[11px] font-medium border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                        className="text-[11px] font-normal gap-1.5 border-border bg-transparent text-foreground/80"
                       >
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                         Strikes: {incident.user?.recordingStrikes ?? 1}
                       </Badge>
 
-                      <Badge
-                        variant={isPending ? "destructive" : "secondary"}
-                        className="text-[11px] font-medium"
-                      >
-                        {incident.status === "pending_review"
-                          ? "Pending Review"
-                          : incident.status === "approved_unlocked"
-                          ? "Approved & Unlocked"
-                          : incident.status === "user_banned"
-                          ? "User Banned"
-                          : incident.status}
-                      </Badge>
+                      <StatusBadge status={incident.status} />
                     </div>
 
                     <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-3">
@@ -319,10 +309,10 @@ export default function AdminSecurityPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-8 text-xs gap-1.5 border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-600"
+                          className="h-8 text-xs gap-1.5 border-border hover:bg-muted/50"
                           onClick={() => handleOpenDialog(incident, "unlock")}
                         >
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                          <CheckCircle2 className="h-3.5 w-3.5" />
                           Approve & Unlock
                         </Button>
                         <Button
